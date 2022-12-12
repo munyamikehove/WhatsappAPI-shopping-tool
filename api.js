@@ -1,11 +1,16 @@
 require("dotenv").config();
+const authyAPIKEY = process.env.AUTHY_API_KEY;
+const stripeSecretAPIKEY = process.env.SK_LIVE;
+const stripe = require("stripe")(stripeSecretAPIKEY);
+const authy = require("authy")(authyAPIKEY);
 const express = require("express");
 const router = express.Router();
 const admin = require("firebase-admin");
 const axios = require("axios");
 const phone = require("awesome-phonenumber");
 const moment = require("moment");
-
+const extractUrls = require("extract-urls");
+const {parser} = require("html-metadata-parser");
 
 const serviceAccount = require("./serviceAccountKey.json");
 
@@ -16,79 +21,397 @@ admin.initializeApp({
 
 const fs = admin.firestore();
 fs.settings({ignoreUndefinedProperties: true});
+const FieldValue = admin.firestore.FieldValue;
 
-const currentDate = moment().format("YYYY/MMM/DD");
-const accountBalanceChatFlowMapIDs = {"": ""};
-const onboardingChatFlowMapIDs = {"A0": "A0", "A1": "A1", "A2": "A2", "A3": "A3", "A4": "A4", "A5": "A5", "A6": "A6", "A7": "A7", "A8": "A8", "A9": "A9", "A10": "A10", "A11": "A11", "A12": "A12", "A13": "A13", "A14": "A14", "A15": "A15", "A16": "A16", "A17": "A17", "A18": "A18", "A19": "A19", "A20": "A20", "A21": "A21", "A22": "A22", "A23": "A23", "A24": "A24", "A25": "A25", "A26": "A26", "A27": "A27", "A28": "A28", "A29": "A29"};
-const supportedCountryCodes = {"CA": "CA", "ZA": "ZA", "LS": "LS", "SZ": "SZ", "ZW": "ZW", "BW": "BW", "ZM": "ZM", "NA": "NA", "MW": "MW", "TZ": "TZ", "KE": "KE", "BI": "BI", "RW": "RW", "UG": "UG", "US": "US", "GB": "GB", "AU": "AU", "NZ": "NZ", "IE": "IE", "GH": "GH", "NG": "NG", "LB": "LB", "AE": "AE", "QA": "QA", "BH": "BH"};
+
+// const currentDate = moment().format("YYYY/MMM/DD");
+const mapAIDs = {"A0": "A0", "A1": "A1", "A2": "A2", "A3": "A3", "A4": "A4", "A5": "A5", "A6": "A6", "A7": "A7"};
+const mapBIDs = {"B0": "B0", "B1": "B1", "B2": "B2", "B3": "B3", "B4": "B4", "B5": "B5", "B6": "B6", "B7": "B7"};
+const mapBXIDs = {"BX0": "BX0", "BX1": "BX1", "BX2": "BX2", "BX3": "BX3", "BX4": "BX4", "BX5": "BX5", "BX6": "BX6", "BX7": "BX7", "BX8": "BX8", "BX9": "BX9", "BX10": "BX10", "BX11": "BX11"};
+const mapBZIDs = {"BZ0": "BZ0", "BZ1": "BZ1", "BZ2": "BZ2", "BZ3": "BZ3", "BZ4": "BZ4", "BZ5": "BZ5", "BZ6": "BZ6", "BZ7": "BZ7"};
+const mapCIDs = {"C1": "C1", "C2": "C2", "C3": "C3", "C4": "C4", "C5": "C5", "C6": "C6", "C7": "C7", "C8": "C8", "C9": "C9"};
+const mapDIDs = {"D1": "D1", "D2": "D2", "D3": "D3", "D4": "D4", "D5": "D5", "D6": "D6", "D7": "D7", "D8": "D8", "D9": "D9"};
+const mapEIDs = {};
+const mapFIDs = {};
+const mapGIDs = {};
+const mapIIDs = {};
+const mapJIDs = {"J1": "J1", "J2": "J2", "J3": "J3", "J4": "J4", "J5": "J5", "J6": "J6", "J7": "J7", "J8": "J8", "J9": "J9", "J10": "J10", "J11": "J11", "J12": "J12", "J13": "J13"};
+const mapKIDs = {};
+const mapLIDs = {};
+const mapMIDs = {};
+const map00IDs = {"00": "00"};
+const supportedCountryCodes = {"GY": "GY", "PG": "PG", "SB": "SB", "VU": "VU", "FJ": "FJ", "AG": "AG", "DM": "DM", "LC": "LC", "VC": "VC", "GD": "GD", "BB": "BB", "TT": "TT", "LK": "LK", "IN": "IN", "BD": "BD", "PR": "PR", "BS": "BS", "JM": "JM", "BZ": "BZ", "HK": "HK", "SG": "SG", "SL": "SL", "MU": "MU", "PH": "PH", "CA": "CA", "ZA": "ZA", "LS": "LS", "SZ": "SZ", "ZW": "ZW", "BW": "BW", "ZM": "ZM", "NA": "NA", "MW": "MW", "TZ": "TZ", "KE": "KE", "BI": "BI", "RW": "RW", "UG": "UG", "US": "US", "GB": "GB", "AU": "AU", "NZ": "NZ", "IE": "IE", "NG": "NG", "LB": "LB", "AE": "AE", "QA": "QA"};
+const supportedCurrencyCodes = {"GY": "gyd", "PG": "pgk", "SB": "sbd", "VU": "vuv", "FJ": "fjd", "AG": "xcd", "DM": "xcd", "LC": "xcd", "VC": "xcd", "GD": "xcd", "BB": "bbd", "TT": "ttd", "LK": "lkr", "IN": "inr", "BD": "bdt", "PR": "usd", "BS": "bsd", "JM": "jmd", "BZ": "bzd", "HK": "hkd", "SG": "sgd", "SL": "sll", "MU": "mur", "PH": "php", "CA": "cad", "ZA": "zar", "LS": "lsl", "SZ": "szl", "ZW": "usd", "BW": "bwp", "ZM": "zmw", "NA": "nad", "MW": "mwk", "TZ": "tzs", "KE": "kes", "BI": "bif", "RW": "rwf", "UG": "ugx", "US": "usd", "GB": "gbp", "AU": "aud", "NZ": "nzd", "IE": "eur", "NG": "ngn", "LB": "usd", "AE": "aed", "QA": "qar"};
+const initialBalanceTransaction = {"GY": -2098, "PG": -35, "SB": -82, "VU": -122, "FJ": -23, "AG": -27, "DM": -27, "LC": -27, "VC": -27, "GD": -27, "BB": -20, "TT": -68, "LK": -3686, "IN": -817, "BD": -1060, "PR": -10, "BS": -10, "JM": -1543, "BZ": -20, "HK": -78, "SG": -14, "SL": -176500, "MU": -438, "PH": -581, "CA": -14, "ZA": -178, "LS": -177, "SZ": -179, "ZW": -10, "BW": -133, "ZM": -164, "NA": -177, "MW": -10271, "TZ": -23300, "KE": -1218, "BI": -207, "RW": -107, "UG": -378, "US": -10, "GB": -8, "AU": -16, "NZ": -17, "IE": -10, "NG": -4403, "LB": -10, "AE": -37, "QA": -36};
+const categoryListReplyIDs = {"1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "10": "10"};
+const keyResponseList = {"end": "end", "stop": "stop", "back": "back", "home": "home", "menu": "menu", "esc": "esc", "x": "x"};
 const consumerListMenu = [
   {
-    "id": "",
-    "title": "🔎 Search for shops",
+    "id": "C0",
+    "title": "🔎 Search Tapfuma",
   },
   {
-    "id": "",
-    "title": "🆔 View your TID",
+    "id": "D0",
+    "title": "⭐️ Browse Products",
   },
   {
-    "id": "",
-    "title": "💰 Top-up balance",
+    "id": "E0",
+    "title": "💰 Account Balance",
   },
   {
-    "id": "",
-    "title": "🎁 Send Zawadi",
+    "id": "F0",
+    "title": "🎁 P2P Transfer",
   },
   {
-    "id": "",
-    "title": "💸 Make payment",
+    "id": "G0",
+    "title": "👑 Your Profile",
   },
   {
-    "id": "",
-    "title": "⚖️ Check balance",
+    "id": "H0",
+    "title": "🔑 Seller Services",
   },
   {
-    "id": "",
-    "title": "🧾 View past transactions",
+    "id": "I0",
+    "title": "👋🏾 Tapfuma FAQs",
   },
   {
-    "id": "",
-    "title": "❤️‍🩹 Get support",
+    "id": "K0",
+    "title": "❤️‍🩹 Get Support",
   },
 ];
 const merchantListMenu = [
   {
-    "id": "",
-    "title": "💵 Charge customer",
+    "id": "J0",
+    "title": "🏷️ List Products",
   },
   {
-    "id": "",
-    "title": "🔄 Issue refund",
+    "id": "L0",
+    "title": "🗂️ View Products",
   },
   {
-    "id": "",
-    "title": "🧾 View past transactions",
+    "id": "M0",
+    "title": "📦 Manage Orders",
   },
   {
-    "id": "",
-    "title": "🆔 View your TID",
-  },
-  {
-    "id": "",
-    "title": "⚖️ Check balance",
-  },
-  {
-    "id": "",
-    "title": "🔎 Search for shops",
-  },
-  {
-    "id": "",
-    "title": "❤️‍🩹 Get support",
+    "id": "N0",
+    "title": "👈🏾 Back Home",
   },
 ];
-// const responseBody = [];
+const categoryListMenu = [
+  {
+    "id": "1",
+    "title": "🥻 Clothing",
+  },
+  {
+    "id": "2",
+    "title": "🥾 Shoes",
+  },
+  {
+    "id": "3",
+    "title": "💎 Watches & Jewelry",
+  },
+  {
+    "id": "4",
+    "title": "💋 Beauty",
+  },
+  {
+    "id": "5",
+    "title": "🌹 Fragrances",
+  },
+  {
+    "id": "6",
+    "title": "🏡 Home & Garden",
+  },
+  {
+    "id": "7",
+    "title": "🪁 Toys and Games",
+  },
+  {
+    "id": "8",
+    "title": "⚽️ Sports",
+  },
+  {
+    "id": "9",
+    "title": "💻 Electronics",
+  },
+  {
+    "id": "10",
+    "title": "🏎️ Automotive",
+  },
+];
+const clothingSubCategoryListMenu = [
+  {
+    "id": "1.1",
+    "title": "Women's clothing",
+  },
+  {
+    "id": "1.2",
+    "title": "Men's clothing",
+  },
+  {
+    "id": "1.3",
+    "title": "Girls's clothing",
+  },
+  {
+    "id": "1.4",
+    "title": "Boys's clothing",
+  },
+];
+const shoesSubCategoryListMenu = [
+  {
+    "id": "2.1",
+    "title": "Women's shoes",
+  },
+  {
+    "id": "2.2",
+    "title": "Men's shoes",
+  },
+  {
+    "id": "2.3",
+    "title": "Girls's shoes",
+  },
+  {
+    "id": "2.4",
+    "title": "Boys's shoes",
+  },
+  {
+    "id": "2.5",
+    "title": "Sporting shoes",
+  },
+];
+const watchesnJewelrySubCategoryListMenu = [
+  {
+    "id": "3.1",
+    "title": "Women's watches",
+  },
+  {
+    "id": "3.2",
+    "title": "Men's watches",
+  },
+  {
+    "id": "3.3",
+    "title": "Women's jewelry",
+  },
+  {
+    "id": "3.4",
+    "title": "Men's jewelry",
+  },
+];
+const beautySubCategoryListMenu = [
+  {
+    "id": "4.1",
+    "title": "Skincare",
+  },
+  {
+    "id": "4.2",
+    "title": "Nails",
+  },
+  {
+    "id": "4.3",
+    "title": "Haircare",
+  },
+  {
+    "id": "4.4",
+    "title": "Makeup",
+  },
+  {
+    "id": "4.5",
+    "title": "Tools & Accessories",
+  },
+];
+const fragrancesSubCategoryListMenu = [
+  {
+    "id": "5.1",
+    "title": "Women's fragrances",
+  },
+  {
+    "id": "5.2",
+    "title": "Men's fragrances",
+  },
+];
+const homenGardenSubCategoryListMenu = [
+  {
+    "id": "6.1",
+    "title": "Kitchen",
+  },
+  {
+    "id": "6.2",
+    "title": "Bedroom",
+  },
+  {
+    "id": "6.3",
+    "title": "Livingroom",
+  },
+  {
+    "id": "6.4",
+    "title": "Bathroom",
+  },
+  {
+    "id": "6.5",
+    "title": "Pantry & Storage",
+  },
+  {
+    "id": "6.6",
+    "title": "Garden",
+  },
+];
+const toysnGamesSubCategoryListMenu = [
+  {
+    "id": "7.1",
+    "title": "0 to 6 months",
+  },
+  {
+    "id": "7.2",
+    "title": "7 to 12 months",
+  },
+  {
+    "id": "7.3",
+    "title": "1 to 2 years",
+  },
+  {
+    "id": "7.4",
+    "title": "3 to 6 years",
+  },
+  {
+    "id": "7.5",
+    "title": "7 to 13 years",
+  },
+  {
+    "id": "7.6",
+    "title": "14 years & older",
+  },
+];
+const sportsSubCategoryListMenu = [
+  {
+    "id": "8.1",
+    "title": "Soccer",
+  },
+  {
+    "id": "8.2",
+    "title": "Cricket",
+  },
+  {
+    "id": "8.3",
+    "title": "Tennis",
+  },
+  {
+    "id": "8.4",
+    "title": "Golf",
+  },
+  {
+    "id": "8.5",
+    "title": "Rugby",
+  },
+  {
+    "id": "8.6",
+    "title": "Cycling",
+  },
+  {
+    "id": "8.7",
+    "title": "Hockey",
+  },
+  {
+    "id": "8.8",
+    "title": "Running",
+  },
+  {
+    "id": "8.9",
+    "title": "Basketball",
+  },
+  {
+    "id": "8.10",
+    "title": "Volleyball",
+  },
+];
+const electronicsSubCategoryListMenu = [
+  {
+    "id": "9.1",
+    "title": "Cellphones & Tablets",
+  },
+  {
+    "id": "9.2",
+    "title": "Headphones & Speakers",
+  },
+  {
+    "id": "9.3",
+    "title": "Cameras",
+  },
+  {
+    "id": "9.4",
+    "title": "Televisions",
+  },
+  {
+    "id": "9.5",
+    "title": "Musical Instruments",
+  },
+  {
+    "id": "9.6",
+    "title": "Laptop & Desktop",
+  },
+  {
+    "id": "9.7",
+    "title": "Video Gaming",
+  },
+  {
+    "id": "9.8",
+    "title": "Monitors",
+  },
+  {
+    "id": "9.9",
+    "title": "Cables & Accessories",
+  },
+  {
+    "id": "9.10",
+    "title": "Batteries",
+  },
+];
+const automotiveSubCategoryListMenu = [
+  {
+    "id": "10.1",
+    "title": "Tires and Wheels",
+  },
+  {
+    "id": "10.2",
+    "title": "Batteries",
+  },
+  {
+    "id": "10.3",
+    "title": "Wiper blades and parts",
+  },
+  {
+    "id": "10.4",
+    "title": "Transmission fluids",
+  },
+  {
+    "id": "10.5",
+    "title": "Engine oils ",
+  },
+  {
+    "id": "10.6",
+    "title": "Gear oils & Grease",
+  },
+  {
+    "id": "10.7",
+    "title": "Filters & PCV Valves",
+  },
+  {
+    "id": "10.8",
+    "title": "Headlights & Bulbs",
+  },
+  {
+    "id": "10.9",
+    "title": "Floor mats & Liners",
+  },
+  {
+    "id": "10.10",
+    "title": "Seat covers & Cushions",
+  },
+];
 let userMessageBody = {};
 let responseMenu = [];
 
+
+// CRUD operations start here
 
 router.get("/", async (req, res) =>{
   const mode = req.query["hub.mode"];
@@ -102,44 +425,51 @@ router.get("/", async (req, res) =>{
     } else {
       res.status(403);
     }
+  } else {
+    res.status(403);
   }
 });
-
 
 router.post("/", async (req, res) => {
   const bodyParam = req.body;
   let messageType = "";
   let chatFlowMapID = "";
+  let previousChatFlowMapID = "";
   let lastMessageTimeStamp = "";
   let listReplyID = "";
   let buttonReplyID = "";
   let userTextMessage = "";
-  let locationLatitude = "";
-  let locationLongitude = "";
-  // let tapsWABAID = "";
-  // let tapsPNID = "";
+  let addressLatitude = "";
+  let addressLongitude = "";
+  let addressFull = "";
+  let addressName = "";
+  // let userEmail = "";
   let currentMessageID = "";
   let userName = "";
   let userPhoneNumber = "";
   let currentMessageTimeStamp = "";
   let countryCode = "";
+  let officialUserName = "";
+  let currentProductID = "";
+  let currentBrowseProductsIndex = 0;
+  let registeredMerchant = false;
+  let registeredUser = false;
+  let stripeCustomer = {};
+
 
   if (bodyParam != null) {
     // Filter messages to remove delivery/read status posts
     if (bodyParam.entry && bodyParam.entry[0].changes && bodyParam.entry[0].changes[0].value.messages && bodyParam.entry[0].changes[0].value.messages[0]) {
       const requestData = bodyParam.entry[0].changes[0].value.messages[0];
       const requestData2 = bodyParam.entry[0].changes[0].value.contacts[0];
-      // const requestData3 = bodyParam.entry[0].changes[0].value.contacts[0];
-      // const requestData4 = bodyParam.entry[0].changes[0].value.contacts[0];
       currentMessageID = requestData["id"];
       userName = requestData2.profile["name"];
       userPhoneNumber = requestData["from"];
       currentMessageTimeStamp = requestData["timestamp"];
-      // tapsWABAID = requestData4["id"];
-      // tapsPNID = requestData3["phone_number_id"];
-      messageType = requestData["type"]; // only text, interactive and location messages
+      messageType = requestData["type"];
 
 
+      // Limit inbound message types to text, interactive and location messages
       if (messageType == "text" || messageType == "location" || messageType == "interactive") {
         if (messageType == "interactive") {
           if (`${requestData["interactive"]["type"]}` == "list_reply") {
@@ -150,8 +480,6 @@ router.post("/", async (req, res) => {
               userName,
               userPhoneNumber,
               "lastMessageTimeStamp": currentMessageTimeStamp,
-              // tapsWABAID,
-              // tapsPNID,
               messageType,
               listReplyID};
           } else if (`${requestData["interactive"]["type"]}` == "button_reply") {
@@ -162,8 +490,6 @@ router.post("/", async (req, res) => {
               userName,
               userPhoneNumber,
               "lastMessageTimeStamp": currentMessageTimeStamp,
-              // tapsWABAID,
-              // tapsPNID,
               messageType,
               buttonReplyID};
           }
@@ -174,58 +500,172 @@ router.post("/", async (req, res) => {
             userName,
             userPhoneNumber,
             "lastMessageTimeStamp": currentMessageTimeStamp,
-            // tapsWABAID,
-            // tapsPNID,
             messageType,
             userTextMessage};
         } else if (messageType == "location") {
-          locationLatitude = requestData["location"]["latitude"];
-          locationLongitude = requestData["location"]["longitude"];
+          addressLatitude = requestData["location"]["latitude"];
+          addressLongitude = requestData["location"]["longitude"];
+          addressFull = requestData["location"]["address"];
+          addressName = requestData["location"]["name"];
 
           userMessageBody = {currentMessageID,
             userName,
             userPhoneNumber,
             "lastMessageTimeStamp": currentMessageTimeStamp,
-            // tapsWABAID,
-            // tapsPNID,
             messageType,
-            locationLatitude,
-            locationLongitude};
+            addressName,
+            addressFull,
+            addressLongitude,
+            addressLatitude};
         }
 
+        // Send read receipt upon message reception
         await sendReadReceipt(currentMessageID);
 
         const parsedNumber = phone(`+${userPhoneNumber}`);
         countryCode = parsedNumber.getRegionCode();
 
+        // Check if user is from a supported country
         if (supportedCountryCodes[countryCode]) {
-          const docRef = fs.collection(`${countryCode}:userMessages`).doc(`${userPhoneNumber}`).collection(`${currentDate}`);
+          const docRef = fs.collection(`${countryCode}`).doc("Messages").collection(`${userPhoneNumber}`);
           docRef.add({
             userMessageBody,
           });
 
-          const userProfile = await getUserProfile(userPhoneNumber);
+          const userProfile = await getUserProfile(userPhoneNumber, countryCode);
 
           if (userProfile["exists"]) {
             const userData = userProfile["userDataObj"];
             chatFlowMapID = userData["chatFlowMapID"];
+            previousChatFlowMapID = userData["previousChatFlowMapID"];
+            // userEmail = userData["userEmail"];
             lastMessageTimeStamp = userData["lastMessageTimeStamp"];
+            currentProductID = userData["currentProductID"];
+            officialUserName = userData["userName"];
+            registeredMerchant = userData["registeredMerchant"];
+            registeredUser = userData["registeredUser"];
+            currentBrowseProductsIndex = userData["currentBrowseProductsIndex"];
 
+            // Reset user chat onEscape
+            if (keyResponseList[userTextMessage.toLowerCase()] != undefined) {
+              chatFlowMapID = "A0";
+            }
+
+            // Create stripe customer account
+            // Create authy user account
+            if ((chatFlowMapID == "B6" && messageType == "buttonReply" && buttonReplyID == "B6.NEXT") || (chatFlowMapID == "BX10" && messageType == "buttonReply" && buttonReplyID == "BX10.NEXT")) {
+              authy.register_user(`${userPhoneNumber}@tapfuma.com`, userPhoneNumber, true, function(err, res) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "authyID": `${res.user.id}`,
+                  "authySetupStatus": `${res["success"]}`,
+                  "authySetupMessage": `${res["message"]}`,
+                  // "authyOnboardingError": `${err.message}`,
+                }, {merge: true});
+              });
+
+              stripeCustomer = await stripe.customers.create({
+                "phone": `${userPhoneNumber}`,
+                "name": `${officialUserName}`,
+              });
+
+              await stripe.customers.createBalanceTransaction(
+                  `${stripeCustomer["id"]}`,
+                  {
+                    "amount": initialBalanceTransaction[countryCode],
+                    "currency": `${supportedCurrencyCodes[countryCode]}`,
+                    "description": "initial account setup balanceTransaction",
+                  },
+              );
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "stripeCustomerID": `${stripeCustomer["id"]}`,
+              }, {merge: true});
+            }
+
+            // Set registered user state in profile
+            if (chatFlowMapID == "B6" && messageType == "buttonReply" && buttonReplyID == "B6.NEXT") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "registeredUser": true,
+              }, {merge: true});
+            } else if (chatFlowMapID == "BX10" && messageType == "buttonReply" && buttonReplyID == "BX10.NEXT") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "registeredMerchant": true,
+                "registeredUser": true,
+              }, {merge: true});
+            } else if (chatFlowMapID == "BZ5" && messageType == "buttonReply" && buttonReplyID == "BZ5.YES") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "registeredMerchant": true,
+              }, {merge: true});
+            }
+
+
+            //  Route user to appropriate chatFlow
             switch (true) {
-              case onboardingChatFlowMapIDs[chatFlowMapID] != undefined:
-                await sendOnboardingResponse(userPhoneNumber, userName, chatFlowMapID, lastMessageTimeStamp, messageType, listReplyID, buttonReplyID, userTextMessage, currentMessageTimeStamp);
+              case mapAIDs[chatFlowMapID] != undefined:
+                await mapA(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, countryCode);
                 break;
-              case accountBalanceChatFlowMapIDs[chatFlowMapID] != undefined:
-                await sendAccountBalanceResponse(userProfile, userPhoneNumber, userName);
+              case mapBIDs[chatFlowMapID] != undefined:
+                await mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType, buttonReplyID, userTextMessage, currentMessageTimeStamp, countryCode);
+                break;
+              case mapBXIDs[chatFlowMapID] != undefined:
+                await mapBX(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, countryCode, previousChatFlowMapID, userTextMessage, addressLatitude, addressLongitude, addressFull, addressName);
+                break;
+              case mapBZIDs[chatFlowMapID] != undefined:
+                await mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, countryCode, previousChatFlowMapID, userTextMessage, addressLatitude, addressLongitude, addressFull, addressName);
+                break;
+              case mapCIDs[chatFlowMapID] != undefined:
+                await mapC(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, countryCode);
+                break;
+              case mapDIDs[chatFlowMapID] != undefined:
+                await mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex);
+                break;
+              case mapEIDs[chatFlowMapID] != undefined:
+                await mapE();
+                break;
+              case mapFIDs[chatFlowMapID] != undefined:
+                await mapF();
+                break;
+              case mapGIDs[chatFlowMapID] != undefined:
+                await mapG();
+                break;
+              case mapIIDs[chatFlowMapID] != undefined:
+                await mapI();
+                break;
+              case mapJIDs[chatFlowMapID] != undefined:
+                await mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, listReplyID, countryCode, userTextMessage, currentProductID, lastMessageTimeStamp);
+                break;
+              case mapKIDs[chatFlowMapID] != undefined:
+                await mapK();
+                break;
+              case mapLIDs[chatFlowMapID] != undefined:
+                await mapL();
+                break;
+              case mapMIDs[chatFlowMapID] != undefined:
+                await mapM();
+                break;
+              case map00IDs[chatFlowMapID] != undefined:
+                await map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStamp, countryCode, registeredUser, registeredMerchant, buttonReplyID);
                 break;
               default:
-              // code block
+              {
+                const docRef5 = fs.collection("errors");
+                docRef5.add({
+                  "errorMessage": "switch statement error: "+chatFlowMapID,
+                });
+              }
+                // code block
             }
           } else {
-            await sendOnboardingResponse(userPhoneNumber, userName, chatFlowMapID, lastMessageTimeStamp, messageType, listReplyID, buttonReplyID, userTextMessage, currentMessageTimeStamp);
+            chatFlowMapID = "A1";
+            await mapA(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, countryCode);
           }
         } else {
-        // Send a coming soon message to the user
+          // Send the user a "country not supported" message
           await sendUnsupportedCountryResponse(userPhoneNumber, userName, countryCode, currentMessageTimeStamp);
         }
       } else {
@@ -234,39 +674,27 @@ router.post("/", async (req, res) => {
 
 
       res.sendStatus(200);
+    } else {
+      res.sendStatus(200);
     }
+  } else {
+    res.sendStatus(200);
   }
 });
 
+router.put("/:id", async (req, res) => {
+  res.send({"Hello": "PUT"});
+});
 
-function sendReadReceipt(currentMessageID) {
-  return new Promise((resolve, reject) => {
-    // Send a read receipt
-    const messageReadResponse = {
-      "messaging_product": "whatsapp",
-      "status": "read",
-      "message_id": `${currentMessageID}`,
-    };
+router.delete("/:id", async (req, res) => {
+  res.send({"Hello": "DELETE"});
+});
 
-    axios({
-      method: "POST",
-      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-      data: messageReadResponse,
-      headers: {"Content-Type": "application/json"},
-    }).catch(function(error) {
-      const docRef5 = fs.collection("errors");
-      docRef5.add({
-        "errorMessage": {error},
-      });
-    });
-
-    resolve();
-  });
-}
+// Regular functions begin here
 
 function sendUnsupportedMessageTypeResponse(userPhoneNumber, userName) {
   return new Promise((resolve, reject) => {
-  // Send a coming soon message to the user
+    // Send a coming soon message to the user
     const textResponse = {
       "messaging_product": "whatsapp",
       "to": userPhoneNumber,
@@ -283,7 +711,7 @@ function sendUnsupportedMessageTypeResponse(userPhoneNumber, userName) {
     }).catch(function(error) {
       const docRef5 = fs.collection("errors");
       docRef5.add({
-        "errorMessage": {error},
+        "errorMessage": "axios error unsupportedMessage is:" + error.message,
       });
     });
 
@@ -293,7 +721,7 @@ function sendUnsupportedMessageTypeResponse(userPhoneNumber, userName) {
 
 function sendUnsupportedCountryResponse(userPhoneNumber, userName, countryCode, currentMessageTimestamp) {
   return new Promise((resolve, reject) => {
-  // Send a coming soon message to the user
+    // Send a coming soon message to the user
     const textResponse = {
       "messaging_product": "whatsapp",
       "to": userPhoneNumber,
@@ -315,7 +743,7 @@ function sendUnsupportedCountryResponse(userPhoneNumber, userName, countryCode, 
     }).catch(function(error) {
       const docRef5 = fs.collection("errors");
       docRef5.add({
-        "errorMessage": {error},
+        "errorMessage": "axios error for unsupportedCountry is:" + error.message,
       });
     });
 
@@ -323,11 +751,36 @@ function sendUnsupportedCountryResponse(userPhoneNumber, userName, countryCode, 
   });
 }
 
-function getUserProfile(userPhoneNumber) {
+function sendReadReceipt(currentMessageID) {
   return new Promise((resolve, reject) => {
-  // check if user is new or exisits
+    // Send a read receipt
+    const messageReadResponse = {
+      "messaging_product": "whatsapp",
+      "status": "read",
+      "message_id": `${currentMessageID}`,
+    };
 
-    const userDataRef = fs.collection("userProfiles").doc(userPhoneNumber);
+    axios({
+      method: "POST",
+      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+      data: messageReadResponse,
+      headers: {"Content-Type": "application/json"},
+    }).catch(function(error) {
+      const docRef5 = fs.collection("errors");
+      docRef5.add({
+        "errorMessage": "axios error readReceipt is:" + error.message,
+      });
+    });
+
+    resolve();
+  });
+}
+
+function getUserProfile(userPhoneNumber, countryCode) {
+  return new Promise((resolve, reject) => {
+    // check if user is new or exisits
+
+    const userDataRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
 
     const userData = userDataRef.get().then((doc) => {
       if (doc.exists) {
@@ -347,243 +800,249 @@ function getUserProfile(userPhoneNumber) {
   });
 }
 
-function sendAccountBalanceResponse(userProfile, userPhoneNumber, userName) {
+function sendFiveSearchResults(userPhoneNumber, countryCode) {
   return new Promise((resolve, reject) => {
-  // send response message to user
-    const userProfileStatus = userProfile["exists"];
-    if (userProfileStatus) {
-      const userProfileObj = userProfile["userDataObj"];
-      if (userProfileObj["accountType"] == "consumer") {
-        responseMenu = consumerListMenu;
+    // check if user is new or exisits
+
+    const userDataRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+
+    const userData = userDataRef.get().then((doc) => {
+      if (doc.exists) {
+        const udt = {"userDataObj": doc.data(), "exists": true};
+        return udt;
       } else {
-        responseMenu = merchantListMenu;
+        const udt = {"exists": false};
+        return udt;
       }
-      const interactiveListResponse = {
-        "messaging_product": "whatsapp",
-        "recipient_type": "individual",
-        "to": `${userPhoneNumber}`,
-        "type": "interactive",
-        "interactive": {
-          "type": "list",
-          "header": {
-            "type": "text",
-            "text": `Hello ${userName}`,
-          },
-          "body": {
-            "text": "Welcome to Tapfuma! How can I assist you today?",
-          },
-          "action": {
-            "button": "Select an option",
-            "sections": [
-              {
+    }).catch((error) => {
+      const udt = {"exists": false};
+      return udt;
+    });
 
-                "rows": responseMenu,
-              },
-            ],
-          },
-        },
-      };
 
-      axios({
-        method: "POST",
-        url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-        data: interactiveListResponse,
-        headers: {"Content-Type": "application/json"},
-      }).catch(function(error) {
-        const docRef5 = fs.collection("errors");
-        docRef5.add({
-          "errorMessage": {error},
-        });
-      });
-    }
-
-    resolve();
+    return resolve(userData);
   });
 }
 
-function sendOnboardingResponse(userPhoneNumber, userName, chatFlowMapID, lastMessageTimeStamp, messageType, listReplyID, buttonReplyID, userTextMessage, currentMessageTimeStamp) {
-  let responseToUserText = {};
-
+function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex) {
   return new Promise((resolve, reject) => {
-  // send response message to user
+    const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test3");
+    docRef.set({
+      countryCode,
+      productCategory,
+      userPhoneNumber,
+      currentBrowseProductsIndex,
+    }, {merge: true});
+    // send 5 browse results
 
-    switch (chatFlowMapID) {
-      case "A1":
-        {
-          if (messageType == "buttonReply" && buttonReplyID == "A1.YES") {
+    let responseToUserText = {};
+
+
+    const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("productCategory", "==", productCategory).where("live", "==", true);
+    query.get().then((snapShot) => {
+      let counter = 0;
+      snapShot.forEach((doc) => {
+        // doc.data() is never undefined for query doc snapshots
+        const productData = doc.data();
+        const productImage = productData["productImage"];
+        const productTitle = productData["productTitle"];
+        const productDescription = productData["productDescription"];
+        const productPrice = productData["productPrice"];
+        const productLink = productData["productLink"];
+        const productID = doc.id;
+
+        if ((counter >= currentBrowseProductsIndex) && (counter <= currentBrowseProductsIndex+5)) {
+          parser(productLink).then((result)=>{
             responseToUserText = {
               "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "Excellent!\nPlease enter your date of birth as MM/DD/YYYY.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 08/09/1992.",
-              },
-            };
-
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A2",
-              userPhoneNumber,
-              "lastMessageTimeStamp": currentMessageTimeStamp,
-            }, {merge: true});
-          } else if (messageType == "buttonReply" && buttonReplyID == "A1.NO") {
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A0",
-              userPhoneNumber,
-              "lastMessageTimeStamp": currentMessageTimeStamp,
-            }, {merge: true});
-
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "That's ok. You can check back with us when you are ready to become a user. Thank you for reaching out to us.",
-              },
-            };
-          }
-        }
-        break;
-      case "A2":
-        {
-          const minimumBirthDateObject = moment().subtract(18, "years").calendar();
-          const userBirthDateObject = moment(userTextMessage).format("MMM Do YYYY");
-          const minimumBirthDate = moment(minimumBirthDateObject).format("YYYY-MM-DD");
-          const userBirthDate = moment(userTextMessage).format("YYYY-MM-DD");
-
-
-          if (userBirthDateObject == "Invalid date") {
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "You have entered an invalid date.\nPlease enter your date of birth as MM/DD/YYYY.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 08/09/1992.",
-              },
-            };
-          } else {
-            if (moment(userBirthDate).isSameOrBefore(minimumBirthDate)) {
-              const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-              docRef.set({
-                "chatFlowMapID": "A3",
-                userBirthDate,
-              }, {merge: true});
-
-              responseToUserText = {
-                "messaging_product": "whatsapp",
-                "to": userPhoneNumber,
-                "type": "interactive",
-                "interactive": {
-                  "type": "button",
-                  "body": {
-                    "text": `You entered ${userBirthDateObject} as your birth date. Is this correct?`,
-                  },
-                  "action": {
-                    "buttons": [
-                      {
-                        "type": "reply",
-                        "reply": {
-                          "id": "A3.YES",
-                          "title": "Yes",
-                        },
-                      },
-                      {
-                        "type": "reply",
-                        "reply": {
-                          "id": "A3.NO",
-                          "title": "No",
-                        },
-                      },
-                    ],
-                  },
-                },
-              };
-            } else {
-              const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-              docRef.set({
-                "chatFlowMapID": "A0",
-              }, {merge: true});
-
-              responseToUserText = {
-                "messaging_product": "whatsapp",
-                "to": userPhoneNumber,
-                "text": {
-                  "body": "You are not old enough to use this service as you are under the age of 18. We will inform you when we add parential guidance features. Thank you for choosing Tapfuma.",
-                },
-              };
-            }
-          }
-        }
-
-        break;
-      case "A3":
-        {
-          if (messageType == "buttonReply" && buttonReplyID == "A3.YES") {
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A4",
-            }, {merge: true});
-
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "Awesome!\nStarting with your first name, please enter your full name as it appears on your birth certificate.\n\nFor example, if your last name is Moyo and your first name is Tawanda, your response would be *Tawanda* *Moyo*.",
-              },
-            };
-          } else if (messageType == "buttonReply" && buttonReplyID == "A3.NO") {
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A2",
-            }, {merge: true});
-
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "Ok, lets try that again.\nPlease enter your date of birth as MM/DD/YYYY.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 08/09/1992.",
-              },
-            };
-          }
-        }
-        break;
-      case "A4":
-        {
-          if (userTextMessage.trim().length === 0) {
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "Oops! It seems you did not enter a name.\nStarting with your first name, please enter your full name as it appears on your birth certificate.\n\nFor example, if your last name is Moyo and your first name is Tatenda, your response would be *Tatenda* *Moyo*.",
-              },
-            };
-          } else {
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A5",
-              "userName": userTextMessage,
-            }, {merge: true});
-
-            responseToUserText = {
-              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
               "to": userPhoneNumber,
               "type": "interactive",
               "interactive": {
                 "type": "button",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": productImage,
+                  },
+                },
                 "body": {
-                  "text": `You entered *${userTextMessage}* as your full name. Is this correct?`,
+                  "text": `*${productTitle}*\n${productDescription}\n${productPrice}\n\nView product👇🏾\n${productLink}`,
+                },
+                "footer": {
+                  "text": "⭐️⭐️⭐️⭐️⭐️ 108",
                 },
                 "action": {
                   "buttons": [
                     {
                       "type": "reply",
                       "reply": {
-                        "id": "A5.YES",
+                        "id": productID,
+                        "title": "View Options",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": productID,
+                        "title": "Add to cart",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+
+            axios({
+              method: "POST",
+              url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+              data: responseToUserText,
+              headers: {"Content-Type": "application/json"},
+            }).catch(function(error) {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+              docRef.add({
+                "mapJerror": "axios error for sendFiveBrowseResults is:" + error.message,
+                "isResolved": false,
+              });
+            });
+          }).catch((error)=>{
+            const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+            productRef.set({
+              "live": false,
+            }, {merge: true});
+          });
+
+
+          if (counter == (currentBrowseProductsIndex+5) || ) {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "currentBrowseProductsIndex": (currentBrowseProductsIndex+5),
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": "What would you like to do next?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": productID,
+                        "title": "Change category",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": productID,
+                        "title": "Checkout",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": productID,
+                        "title": "View More",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+
+
+            axios({
+              method: "POST",
+              url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+              data: responseToUserText,
+              headers: {"Content-Type": "application/json"},
+            }).catch(function(error) {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+              docRef.add({
+                "mapJerror": "axios error for sendFiveBrowseResults is:" + error.message,
+                "isResolved": false,
+              });
+            });
+          }
+
+          counter++;
+        }
+      });
+    }).catch(function(error) {
+      const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test2");
+      docRef.set({
+        error,
+      }, {merge: true});
+    });
+
+
+    return resolve();
+  });
+}
+
+function j2Extension(countryCode, productLink, userName, userPhoneNumber, currentMessageTimeStamp) {
+  return new Promise((resolve, reject) => {
+    let responseToUserText = {};
+    parser(productLink).then((result)=>{
+      if (result.og["description"] !== undefined) {
+        const fixedDescriptionArray = result.og["description"].split("·");
+        if (fixedDescriptionArray[1] !== undefined) {
+          const fixedTitleArray = result.og["title"].split(` from ${userName} `);
+          const productTitle = fixedTitleArray[0].trim();
+          const productDescription = fixedDescriptionArray[0].trim();
+          const productPrice = fixedDescriptionArray[1].trim();
+          productLink = productLink.split("https://")[1].trim();
+
+          const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts");
+          productRef.add({
+            userPhoneNumber,
+            "approved": false,
+            "live": true,
+            "outOfStock": false,
+            "createdON": currentMessageTimeStamp,
+            "productTitle": productTitle,
+            "productDescription": productDescription,
+            "productPrice": productPrice,
+            "productImage": result.og["image"],
+            productLink,
+          }).then((docRefID) => {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "currentProductID": docRefID.id,
+              "chatFlowMapID": "J3",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+              "userProducts": FieldValue.arrayUnion(`${docRefID.id}`),
+            }, {merge: true});
+
+            const responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": "*Step 2 of 5 - Product Sizes*\n\nDo you offer different sizes for this product?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J3.YES",
                         "title": "Yes",
                       },
                     },
                     {
                       "type": "reply",
                       "reply": {
-                        "id": "A5.NO",
+                        "id": "J3.NO",
                         "title": "No",
                       },
                     },
@@ -591,304 +1050,407 @@ function sendOnboardingResponse(userPhoneNumber, userName, chatFlowMapID, lastMe
                 },
               },
             };
-          }
+
+            axios({
+              method: "POST",
+              url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+              data: responseToUserText,
+              headers: {"Content-Type": "application/json"},
+            }).catch(function(error) {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+              docRef.add({
+                "mapJerror": "axios error for map J2X is:" + error.message,
+                "isResolved": false,
+              });
+            });
+          });
+        } else {
+          const responseToUserText = {
+            "messaging_product": "whatsapp",
+            "to": userPhoneNumber,
+            "text": {
+              "body": "Your whatsapp product needs to have both a price and a description.\n\nPlease add a whatsapp product with both price and description to proceed.",
+            },
+          };
+
+          axios({
+            method: "POST",
+            url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+            data: responseToUserText,
+            headers: {"Content-Type": "application/json"},
+          }).catch(function(error) {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+            docRef.add({
+              "mapJerror": "axios error for map J2X is:" + error.message,
+              "isResolved": false,
+            });
+          });
+        }
+      } else {
+        const responseToUserText = {
+          "messaging_product": "whatsapp",
+          "to": userPhoneNumber,
+          "text": {
+            "body": "Your whatsapp product needs to have both a price and a description.\n\nPlease add a whatsapp product with both price and description to proceed.",
+          },
+        };
+
+        axios({
+          method: "POST",
+          url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+          data: responseToUserText,
+          headers: {"Content-Type": "application/json"},
+        }).catch(function(error) {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+          docRef.add({
+            "mapJerror": "axios error for map J2X is:" + error.message,
+            "isResolved": false,
+          });
+        });
+      }
+    }).catch((error)=>{
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+      docRef.add({
+        "mapJ2error": "firebase error for map is:" + error.message,
+        "isResolved": false,
+      });
+
+      responseToUserText = {
+        "messaging_product": "whatsapp",
+        "to": userPhoneNumber,
+        "text": {
+          "body": "We ran into some issues processing your product link. Please check your product link and try again.",
+        },
+      };
+
+      axios({
+        method: "POST",
+        url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+        data: responseToUserText,
+        headers: {"Content-Type": "application/json"},
+      }).catch(function(error) {
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+        docRef.add({
+          "mapJerror": "axios error for map J2X parser error is:" + error.message,
+          "isResolved": false,
+        });
+      });
+    });
+
+
+    return resolve();
+  });
+}
+
+// Map functions begin here
+
+function mapA(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, countryCode) {
+  let responseToUserText = {};
+  return new Promise((resolve, reject) => {
+    switch (chatFlowMapID) {
+      case "A1":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "A2",
+            "registeredMerchant": false,
+            "registeredUser": false,
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": userPhoneNumber,
+            "type": "interactive",
+            "interactive": {
+              "type": "button",
+              "header": {
+                "type": "image",
+                "image": {
+                  "link": "https://tapsimagestorage.web.app/images/welcome.png",
+                },
+              },
+              "body": {
+                "text": `Hello ${userName},\nand welcome to Tapfuma! 😃\n\nBefore you get started, allow us to introduce ourselves.\n\nTapfuma is a chat application you can use to buy or sell products on Whatsapp.`,
+              },
+              "action": {
+                "buttons": [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "A2",
+                      "title": "Next",
+                    },
+                  },
+
+                ],
+              },
+            },
+          };
+        }
+        break;
+      case "A2":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "A3",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": userPhoneNumber,
+            "type": "interactive",
+            "interactive": {
+              "type": "button",
+              "header": {
+                "type": "image",
+                "image": {
+                  "link": "https://tapsimagestorage.web.app/images/general_account.png",
+                },
+              },
+              "body": {
+                "text": "To buy products on Tapfuma, send us a Whatsapp message and we will respond with a menu. Choose the search or browse menu options to find products to buy.\n\nWhen you find a product you like, simply pay for it using your Tapfuma provided *Whatsapp Wallet*, and we will deliver the product to your door-step.",
+              },
+              "action": {
+                "buttons": [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "A3",
+                      "title": "Next",
+                    },
+                  },
+
+                ],
+              },
+            },
+          };
+        }
+        break;
+      case "A3":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "A4",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": userPhoneNumber,
+            "type": "interactive",
+            "interactive": {
+              "type": "button",
+              "header": {
+                "type": "image",
+                "image": {
+                  "link": "https://tapsimagestorage.web.app/images/merchant_account.jpg",
+                },
+              },
+              "body": {
+                "text": "Selling products on Tapfuma is just as easy. Simply send us a whatsapp message and we will respond with a menu. Use the list products menu options to list products to sell.\n\nWhen you make a sale, we will handle product delivery and deposit funds to your bank account. We also provide you with a Mastercard that you can use to withdraw your sales as cash at any bank ATM!",
+              },
+              "action": {
+                "buttons": [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "A4",
+                      "title": "Next",
+                    },
+                  },
+
+                ],
+              },
+            },
+          };
+        }
+        break;
+      case "A4":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "A5",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": userPhoneNumber,
+            "type": "interactive",
+            "interactive": {
+              "type": "button",
+              "header": {
+                "type": "image",
+                "image": {
+                  "link": "https://tapsimagestorage.web.app/images/free_services.png",
+                },
+              },
+              "body": {
+                "text": "Tapfuma accounts are free to use for both buyers and sellers!\n\n➣ We will never charge you to list, search for or buy products on our platform.\n\n➣ We do not charge payment processing fees for transactions on Tapfuma.\n\n➣ All peer-to-peer transfers are unlimited and free.",
+              },
+              "footer": {
+                "text": "We only charge sellers 5% to withdraw sales.",
+              },
+              "action": {
+                "buttons": [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "A5",
+                      "title": "Next",
+                    },
+                  },
+
+                ],
+              },
+            },
+          };
         }
         break;
       case "A5":
         {
-          if (messageType == "buttonReply" && buttonReplyID == "A5.YES") {
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A6",
-            }, {merge: true});
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "A6",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
 
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "We're almost done setting up your account!\nWhat email address can we use to reach you if we fail to reach you on this number?",
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "to": userPhoneNumber,
+            "type": "interactive",
+            "interactive": {
+              "type": "button",
+              "body": {
+                "text": " Now that you know about us, how can we be of assistance today?",
               },
-            };
-          } else if (messageType == "buttonReply" && buttonReplyID == "A5.NO") {
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A4",
-            }, {merge: true});
-
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "No worries, lets try again.\nStarting with your first name, please enter your full name as it appears on your birth certificate.\n\nFor example, if your last name is Moyo and your first name is Tatenda, your response would be *Tatenda* *Moyo*.",
+              "action": {
+                "buttons": [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "A6.VM",
+                      "title": "View Menu",
+                    },
+                  },
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "A6.BP",
+                      "title": "Browse Products",
+                    },
+                  },
+                ],
               },
-            };
-          }
+            },
+          };
         }
         break;
       case "A6":
         {
-          if (userTextMessage.trim().length === 0) {
+          if (messageType == "buttonReply" && buttonReplyID == "A6.VM") {
+            responseMenu = consumerListMenu;
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set( {
+              "chatFlowMapID": "00",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
             responseToUserText = {
               "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
-              "text": {
-                "body": "Oops! It seems you did not enter a valid email address.\nWhat email address can we use to reach you if we fail to reach you on this number?",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick an option from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "A6.BP") {
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "D2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
               },
             };
           } else {
-            const re = /\S+@\S+\.\S+/;
-            const rex = re.test(userTextMessage.toLowerCase());
-            if (rex == false) {
-              responseToUserText = {
-                "messaging_product": "whatsapp",
-                "to": userPhoneNumber,
-                "text": {
-                  "body": "Oops! It seems you did not enter a valid email address.\nWhat email address can we use to reach you if we fail to reach you on this number?",
-                },
-              };
-            } else {
-              const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-              docRef.set({
-                "chatFlowMapID": "A7",
-                "userEmail": userTextMessage,
-              }, {merge: true});
-
-              responseToUserText = {
-                "messaging_product": "whatsapp",
-                "to": userPhoneNumber,
-                "type": "interactive",
-                "interactive": {
-                  "type": "button",
-                  "body": {
-                    "text": `You entered *${userTextMessage}* as your email address. Is this correct?`,
-                  },
-                  "action": {
-                    "buttons": [
-                      {
-                        "type": "reply",
-                        "reply": {
-                          "id": "A7.YES",
-                          "title": "Yes",
-                        },
-                      },
-                      {
-                        "type": "reply",
-                        "reply": {
-                          "id": "A7.NO",
-                          "title": "No",
-                        },
-                      },
-                    ],
-                  },
-                },
-              };
-            }
-          }
-        }
-        break;
-      case "A7":
-        {
-          if (messageType == "buttonReply" && buttonReplyID == "A7.YES") {
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A8",
-            }, {merge: true});
-
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "recipient_type": "individual",
-              "to": "16473739305",
-              "type": "interactive",
-              "interactive": {
-                "type": "button",
-                "header": {
-                  "type": "image",
-                  "image": {
-                    "link": "https://tapsimagestorage.web.app/images/pay.jpg",
-                  },
-                },
-                "body": {
-                  "text": "A *General account* is used to make purchases with Tapfuma merchants, and for peer-to-peer transfers.\n\nTapfuma does not charge for peer-to-peer transfers.\nTapfuma does not charge monthly or annual fees.\nTapfuma has no required minimium account balance.\n",
-                },
-                "footer": {
-                  "text": "You cannot withdraw money from a general account.",
-                },
-                "action": {
-                  "buttons": [
-                    {
-                      "type": "reply",
-                      "reply": {
-                        "id": "A8.NEXT1",
-                        "title": "Next",
-                      },
-                    },
-
-                  ],
-                },
-              },
-            };
-          } else if (messageType == "buttonReply" && buttonReplyID == "A7.NO") {
-            const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
-            docRef.set({
-              "chatFlowMapID": "A6",
-            }, {merge: true});
-
             responseToUserText = {
               "messaging_product": "whatsapp",
               "to": userPhoneNumber,
-              "text": {
-                "body": "No worries, lets try again.\nWhat email address can we use to reach you if we fail to reach you on this number?",
-              },
-            };
-          }
-        }
-        break;
-      case "A8":
-        {
-          if (messageType == "buttonReply" && buttonReplyID == "A8.NEXT1") {
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "recipient_type": "individual",
-              "to": "16473739305",
               "type": "interactive",
               "interactive": {
                 "type": "button",
-                "header": {
-                  "type": "image",
-                  "image": {
-                    "link": "https://tapsimagestorage.web.app/images/pay.jpg",
-                  },
-                },
                 "body": {
-                  "text": "A *Merchant account* is used to accept payments for goods and services you sell.\n\nYou can access your sales through the Visa/Mastercard that we will send to you once your merchant account is approved.\nTo be approved as a merchant, you must have a WhatsApp business account with products in your catalog. You products must be priced in your local currency.\nThe balance in your Merchant account is stored in USD, even when you make sales  in your local currency.",
-                },
-                "footer": {
-                  "text": "Merchant accounts cannot make peer-to-peer transfers.",
+                  "text": " How can we be of assistance today?",
                 },
                 "action": {
                   "buttons": [
                     {
                       "type": "reply",
                       "reply": {
-                        "id": "A8.NEXT2",
-                        "title": "Next",
+                        "id": "A6.VM",
+                        "title": "View Menu",
                       },
                     },
-
-                  ],
-                },
-              },
-            };
-          } else if (messageType == "buttonReply" && buttonReplyID == "A7.NEXT2") {
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "recipient_type": "individual",
-              "to": "16473739305",
-              "type": "interactive",
-              "interactive": {
-                "type": "button",
-                "header": {
-                  "type": "image",
-                  "image": {
-                    "link": "https://tapsimagestorage.web.app/images/card.png",
-                  },
-                },
-                "body": {
-                  "text": "*Merchant accout* (continued)\n\nTapfuma does not charge payment processing fees.\nTapfuma does not charge monthly or annual fees.\nTapfuma has no required minimium account balance.\n As a Merchant, you get unlimited free transactions when you make purchases online or at any point-of-sale using your Tapfuma provided Visa/Mastercard .",
-                },
-                "footer": {
-                  "text": "ATM withdrawals cost 7% amount withdrawn plus ATM fees.",
-                },
-                "action": {
-                  "buttons": [
                     {
                       "type": "reply",
                       "reply": {
-                        "id": "A8.NEXT3",
-                        "title": "Next",
+                        "id": "A6.BP",
+                        "title": "Browse Products",
                       },
                     },
-
                   ],
                 },
               },
             };
           }
-          // else if (messageType == "buttonReply" && buttonReplyID == "A7.NEXT3") {
-
-          // }
         }
         break;
-      case "A9":
-
-        break;
-      case "A10":
-
-        break;
-      case "A11":
-
-        break;
-      case "A12":
-
-        break;
-      case "A13":
-
-        break;
-      case "A14":
-
-        break;
-      case "A15":
-
-        break;
-      case "A16":
-
-        break;
-      case "A17":
-
-        break;
-      case "A18":
-
-        break;
-      case "A19":
-
-        break;
-      case "A20":
-
-        break;
-      case "A21":
-
-        break;
-      case "A22":
-
-        break;
-      case "A23":
-
-        break;
-      case "A24":
-
-        break;
-      case "A25":
-
-        break;
-      case "A26":
-
-        break;
-      case "A27":
-
-        break;
-      case "A28":
-
-        break;
-      case "A29":
-
-        break;
-
       default:
       {
-        const docRef = fs.collection("userProfiles").doc(userPhoneNumber);
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
         docRef.set({
-          "chatFlowMapID": "A1",
-          userPhoneNumber,
+          "chatFlowMapID": "A6",
           "lastMessageTimeStamp": currentMessageTimeStamp,
         }, {merge: true});
 
@@ -899,22 +1461,22 @@ function sendOnboardingResponse(userPhoneNumber, userName, chatFlowMapID, lastMe
           "interactive": {
             "type": "button",
             "body": {
-              "text": `Welcome ${userName}. It looks like you are not yet a registered user. Would you like to join Tapfuma today?`,
+              "text": " How can we be of assistance today?",
             },
             "action": {
               "buttons": [
                 {
                   "type": "reply",
                   "reply": {
-                    "id": "A1.YES",
-                    "title": "Yes",
+                    "id": "A6.VM",
+                    "title": "View Menu",
                   },
                 },
                 {
                   "type": "reply",
                   "reply": {
-                    "id": "A1.NO",
-                    "title": "No",
+                    "id": "A6.BP",
+                    "title": "Browse Products",
                   },
                 },
               ],
@@ -924,6 +1486,3790 @@ function sendOnboardingResponse(userPhoneNumber, userName, chatFlowMapID, lastMe
       }
     }
 
+    axios({
+      method: "POST",
+      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+      data: responseToUserText,
+      headers: {"Content-Type": "application/json"},
+    }).catch(function(error) {
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+      docRef.add({
+        "mapAerror": "axios error for map A is:" + error.message,
+        "isResolved": false,
+      });
+    });
+
+    resolve();
+  });
+}
+
+function mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType, buttonReplyID, userTextMessage, currentMessageTimeStamp, countryCode) {
+  let responseToUserText = {};
+  return new Promise((resolve, reject) => {
+    switch (chatFlowMapID) {
+      case "B0":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "B0.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "B2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 1 of 3  -  User Name*\n\nWhat is your full name as it appears on your birth certificate?",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "B0.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "A6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok 😃. Send us a message when you need our assistance and we will respond with a menu of options.",
+              },
+            };
+          } else {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "A6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": " How can we be of assistance today?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.VM",
+                        "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.BP",
+                        "title": "Browse Products",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "B1":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "B2",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "to": userPhoneNumber,
+            "text": {
+              "body": "*Step 1 of 3  -  User Name*\n\nWhat is your full name as it appears on your birth certificate?",
+            },
+          };
+        }
+        break;
+      case "B2":
+        {
+          if (messageType == "text") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "B3",
+              "userName": userTextMessage.trim(),
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": `You entered *${userTextMessage.trim()}* as your full name. Is this correct?`,
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "B3.YES",
+                        "title": "Yes",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "B3.NO",
+                        "title": "No",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "What is your full name as it appears on your birth certificate?\n\nWe need this information for account recovery if you ever lose access to this phone number.",
+              },
+            };
+          }
+        }
+        break;
+      case "B3":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "B3.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "B4",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 2 of 3  -  Date of Birth*\n\nWhat is your date of birth? Please enter it as M.D.YYYY\n\nE.G. A person born on October 12th, 1992 would respond 10.12.1992",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "B3.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "B2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok. Lets try again 😀.\n\nWhat is your full name as it appears on your birth certificate?\n\nWe need this information for account recovery if you ever lose access to this phone number.",
+              },
+            };
+          }
+        }
+        break;
+      case "B4":
+        {
+          if (messageType == "text") {
+            const minimumBirthDateObject = moment().subtract(18, "years").calendar();
+            const userBirthDateObject = moment(userTextMessage).format("MMM Do YYYY");
+            const minimumBirthDate = moment(minimumBirthDateObject).format("YYYY-MM-DD");
+            const userBirthDate = moment(userTextMessage).format("YYYY-MM-DD");
+
+            if (userBirthDateObject == "Invalid date") {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "You have entered an invalid date 😵‍💫.\n\nPlease enter your date of birth following the M.D.YYYY format.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 8.9.1992",
+                },
+              };
+            } else {
+              if (moment(userBirthDate).isSameOrBefore(minimumBirthDate)) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "chatFlowMapID": "B5",
+                  userBirthDate,
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                }, {merge: true});
+
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "button",
+                    "body": {
+                      "text": `You entered ${userBirthDateObject} as your birth date. Is this correct?`,
+                    },
+                    "action": {
+                      "buttons": [
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "B5.YES",
+                            "title": "Yes",
+                          },
+                        },
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "B5.NO",
+                            "title": "No",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                };
+              } else {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "chatFlowMapID": "00",
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                }, {merge: true});
+
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "text": {
+                    "body": "You are not old enough to use this service as you are under the age of 18. We will inform you when we add parential guidance features. Thank you for choosing Tapfuma.",
+                  },
+                };
+              }
+            }
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "You have entered an invalid date 😵‍💫.\n\nPlease enter your date of birth following the M.D.YYYY format.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 8.9.1992",
+              },
+            };
+          }
+        }
+        break;
+      case "B5":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "B5.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "B6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": "https://tapsimagestorage.web.app/images/authy.jpeg",
+                  },
+                },
+                "body": {
+                  "text": "*Step 3 of 3 - Account Security*\n\nTapfuma uses Authy by Twilio to verify your identity when you make requests like peer-to-peer transfers.\n\nFollow these instructions to setup Authy:\n\n➣ Download Authy using this link 👉🏾 https://authy.com/download/ \n\n➣ After setting up the Authy app, navigate to the security section found in the Authy app settings.\n\n➣ Enable Authy app protection. If your device supports biometrics, enable biometric protection and the \"protect entire app\" features.\n\nAfter you have complete these steps, tap the \"Next\" button below.",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "B6.NEXT",
+                        "title": "Next",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "B5.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "B4",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok. Lets try again 😀.\n\nPlease enter your date of birth following the M.D.YYYY format.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 8.9.1992",
+              },
+            };
+          }
+        }
+        break;
+      case "B6":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "B6.NEXT") {
+            // Check if user was persorming p2pTransfer or productPuchase or accountBalanceCheck or profileCheck
+            if (previousChatFlowMapID == "E0") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "E2",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "🎉 Congratulations on becoming a registered user! 🎉\n\nTo view your account balance, tap the 'Next' button below.",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "B6.NEXT",
+                          "title": "Next",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            } else if (previousChatFlowMapID == "F0") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "F2",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "🎉 Congratulations on becoming a registered user! 🎉\n\nWhat is the TID of the user you wish to transfer money to?",
+                },
+              };
+            } else if (previousChatFlowMapID == "G0") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "G2",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "🎉 Congratulations on becoming a registered user! 🎉\n\nTo view your profile, tap the 'Next' button below.",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "B6.NEXT",
+                          "title": "Next",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            } else {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "B7",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "🎉 Congratulations on becoming a registered user! 🎉\n\nHow can we be of further assistance today?",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "B7.VM",
+                          "title": "View Menu",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "B7.BP",
+                          "title": "Browse Products",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": "https://tapsimagestorage.web.app/images/authy.jpeg",
+                  },
+                },
+                "body": {
+                  "text": "*Step 3 of 3 - Account Security*\n\nTapfuma uses Authy by Twilio to verify your identity when you make requests like peer-to-peer transfers.\n\nFollow these instructions to setup Authy:\n\n➣ Download Authy using this link 👉🏾 https://authy.com/download/ \n\n➣ After setting up the Authy app, navigate to the security section found in the Authy app settings.\n\n➣ Enable Authy app protection. If your device supports biometrics, enable biometric protection and the \"protect entire app\" features.\n\nAfter you have complete these steps, tap the \"Next\" button below.",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "B6.NEXT",
+                        "title": "Next",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "B7":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "B7.VM") {
+            responseMenu = consumerListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "00",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick an option from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "B7.BP") {
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "D2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": " How can we be of assistance today?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "B7.VM",
+                        "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "B7.BP",
+                        "title": "Browse Products",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      default:
+      {
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+        docRef.set({
+          "chatFlowMapID": "B7",
+          "lastMessageTimeStamp": currentMessageTimeStamp,
+        }, {merge: true});
+
+        responseToUserText = {
+          "messaging_product": "whatsapp",
+          "to": userPhoneNumber,
+          "type": "interactive",
+          "interactive": {
+            "type": "button",
+            "body": {
+              "text": " How can we be of assistance today?",
+            },
+            "action": {
+              "buttons": [
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "B7.VM",
+                    "title": "View Menu",
+                  },
+                },
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "B7.BP",
+                    "title": "Browse Products",
+                  },
+                },
+              ],
+            },
+          },
+        };
+      }
+    }
+
+    axios({
+      method: "POST",
+      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+      data: responseToUserText,
+      headers: {"Content-Type": "application/json"},
+    }).catch(function(error) {
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+      docRef.add({
+        "mapBerror": "axios error for map B is:" + error.message,
+        "isResolved": false,
+      });
+    });
+
+    resolve();
+  });
+}
+
+function mapBX(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, countryCode, previousChatFlowMapID, userTextMessage, addressLatitude, addressLongitude, addressFull, addressName) {
+  let responseToUserText = {};
+  return new Promise((resolve, reject) => {
+    switch (chatFlowMapID) {
+      case "BX0":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BX0.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 1 of 5  -  User Name*\n\nWhat is your full name as it appears on your birth certificate?",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BX0.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "A6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok 😃. Send us a message when you need our assistance and we will respond with a menu of options.",
+              },
+            };
+          } else {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "A6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": " How can we be of assistance today?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.VM",
+                        "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.BP",
+                        "title": "Browse Products",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "BX1":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "BX2",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "to": userPhoneNumber,
+            "text": {
+              "body": "*Step 1 of 5  -  User Name*\n\nWhat is your full name as it appears on your birth certificate?",
+            },
+          };
+        }
+        break;
+      case "BX2":
+        {
+          if (messageType == "text") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX3",
+              "userName": userTextMessage.trim(),
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": `You entered *${userTextMessage.trim()}* as your full name. Is this correct?`,
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX3.YES",
+                        "title": "Yes",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX3.NO",
+                        "title": "No",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "What is your full name as it appears on your birth certificate?\n\nWe need this information for account recovery if you ever lose access to this phone number.",
+              },
+            };
+          }
+        }
+        break;
+      case "BX3":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BX3.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX4",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 2 of 5  -  Date of Birth*\n\nWhat is your date of birth? Please enter it as M.D.YYYY\n\nE.G. A person born on October 12th, 1992 would respond 10.12.1992",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BX3.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok. Lets try again 😀.\n\nWhat is your full name as it appears on your birth certificate?\n\nWe need this information for account recovery if you ever lose access to this phone number.",
+              },
+            };
+          }
+        }
+        break;
+      case "BX4":
+        {
+          if (messageType == "text") {
+            const minimumBirthDateObject = moment().subtract(18, "years").calendar();
+            const userBirthDateObject = moment(userTextMessage).format("MMM Do YYYY");
+            const minimumBirthDate = moment(minimumBirthDateObject).format("YYYY-MM-DD");
+            const userBirthDate = moment(userTextMessage).format("YYYY-MM-DD");
+
+            if (userBirthDateObject == "Invalid date") {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "You have entered an invalid date 😵‍💫.\n\nPlease enter your date of birth following the M.D.YYYY format.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 8.9.1992",
+                },
+              };
+            } else {
+              if (moment(userBirthDate).isSameOrBefore(minimumBirthDate)) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "chatFlowMapID": "BX5",
+                  userBirthDate,
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                }, {merge: true});
+
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "button",
+                    "body": {
+                      "text": `You entered ${userBirthDateObject} as your birth date. Is this correct?`,
+                    },
+                    "action": {
+                      "buttons": [
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "BX5.YES",
+                            "title": "Yes",
+                          },
+                        },
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "BX5.NO",
+                            "title": "No",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                };
+              } else {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "chatFlowMapID": "00",
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                }, {merge: true});
+
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "text": {
+                    "body": "You are not old enough to use this service as you are under the age of 18. We will inform you when we add parential guidance features. Thank you for choosing Tapfuma.",
+                  },
+                };
+              }
+            }
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "You have entered an invalid date 😵‍💫.\n\nPlease enter your date of birth following the M.D.YYYY format.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 8.9.1992",
+              },
+            };
+          }
+        }
+        break;
+      case "BX5":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BX5.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 3 of 5 - Account Backup*\n\nWhat email address can we use to contact you if you ever lose access to this number?",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BX5.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX4",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok. Lets try again 😀.\n\nPlease enter your date of birth following the M.D.YYYY format.\n\nFor example, if you were born on the 9th of August 1992, your date of borth would be 8.9.1992",
+              },
+            };
+          }
+        }
+        break;
+      case "BX6":
+        {
+          if (messageType == "text") {
+            if (userTextMessage.trim().length < 6) {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "Oops! It seems you did not enter a valid email address 🥴.\n\nWhat email address can we use to reach you if we fail to reach you on this number?",
+                },
+              };
+            } else {
+              const re = /\S+@\S+\.\S+/;
+              const rex = re.test(userTextMessage.toLowerCase());
+              if (rex == false) {
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber.toLowerCase(),
+                  "text": {
+                    "body": "Oops! It seems you did not enter a valid email address.\nWhat email address can we use to reach you if we fail to reach you on this number?",
+                  },
+                };
+              } else {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "chatFlowMapID": "BX7",
+                  "userEmail": userTextMessage.trim().toLowerCase(),
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                }, {merge: true});
+
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "button",
+                    "body": {
+                      "text": `You entered *${userTextMessage.trim().toLowerCase()}* as your email address. Is this correct?`,
+                    },
+                    "action": {
+                      "buttons": [
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "BX7.YES",
+                            "title": "Yes",
+                          },
+                        },
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "BX7.NO",
+                            "title": "No",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                };
+              }
+            }
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber.toLowerCase(),
+              "text": {
+                "body": "Oops! It seems you did not enter a valid email address.\n\nWhat email address can we use to reach you if we fail to reach you on this number?",
+              },
+            };
+          }
+        }
+        break;
+      case "BX7":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BX7.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX8",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 4 of 5 - Business Address*\n\nPlease send us your business address using the Whatsapp location feature.\n\nThis location must be accessible to delivery drivers for product pick-ups.",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BX7.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok. Lets try again 😀.\n\nWhat email address can we use to reach you if we fail to reach you on this number?",
+              },
+            };
+          }
+        }
+        break;
+      case "BX8":
+        {
+          if (messageType == "location") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              addressLatitude,
+              addressLongitude,
+              addressFull,
+              addressName,
+              "chatFlowMapID": "BX9",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": `You entered ${addressFull} as your address. Is this correct?`,
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX9.YES",
+                        "title": "Yes",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX9.NO",
+                        "title": "No",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "Please send us your business address using the *Whatsapp location feature*.\n\nThis location must be accessible to delivery drivers for product pick-ups.",
+              },
+            };
+          }
+        }
+        break;
+      case "BX9":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BX9.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX10",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": "https://tapsimagestorage.web.app/images/authy.jpeg",
+                  },
+                },
+                "body": {
+                  "text": "*Step 5 of 5 - Account Security*\n\nTapfuma uses Authy by Twilio to verify your identity when you make requests like peer-to-peer transfers.\n\nFollow these instructions to setup Authy:\n\n➣ Download Authy using this link 👉🏾 https://authy.com/download/ \n\n➣ After setting up the Authy app, navigate to the security section found in the Authy app settings.\n\n➣ Enable Authy app protection. If your device supports biometrics, enable biometric protection and the \"protect entire app\" features.\n\nAfter you have complete these steps, tap the \"Next\" button below.",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX10.NEXT",
+                        "title": "Next",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BX9.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BX8",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok. Lets try again 😀.\n\nPlease send us your business address using the *Whatsapp location feature*.\n\nThis location must be accessible to delivery drivers for product pick-ups.",
+              },
+            };
+          }
+        }
+        break;
+      case "BX10":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BX10.NEXT") {
+            // Check if user was performing gated action
+            if (previousChatFlowMapID == "H0") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "00",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseMenu = merchantListMenu;
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": `${userPhoneNumber}`,
+                "type": "interactive",
+                "interactive": {
+                  "type": "list",
+                  "body": {
+                    "text": "🎉 Congratulations on becoming a registered seller! 🎉\n\nTo proceed, please choose an option from the *Seller Services* menu below.",
+                  },
+                  "action": {
+                    "button": "Select an option",
+                    "sections": [
+                      {
+
+                        "rows": responseMenu,
+                      },
+                    ],
+                  },
+                },
+              };
+            } else {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "BX11",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": " How can we be of assistance today?",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "BX11.VM",
+                          "title": "View Menu",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "BX11.BP",
+                          "title": "Browse Products",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "header": {
+                  "type": "image",
+                  "image": {
+                    "link": "https://tapsimagestorage.web.app/images/authy.jpeg",
+                  },
+                },
+                "body": {
+                  "text": "*Step 5 of 5 - Account Security*\n\nTapfuma uses Authy by Twilio to verify your identity when you make requests like peer-to-peer transfers.\n\nFollow these instructions to setup Authy:\n\n➣ Download Authy using this link 👉🏾 https://authy.com/download/ \n\n➣ After setting up the Authy app, navigate to the security section found in the Authy app settings.\n\n➣ Enable Authy app protection. If your device supports biometrics, enable biometric protection and the \"protect entire app\" features.\n\nAfter you have complete these steps, tap the \"Next\" button below.",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX10.NEXT",
+                        "title": "Next",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "BX11":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BX11.VM") {
+            responseMenu = consumerListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "00",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick an option from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BX11.BP") {
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "D2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": " How can we be of assistance today?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX11.VM",
+                        "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX11.BP",
+                        "title": "Browse Products",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      default:
+      {
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+        docRef.set({
+          "chatFlowMapID": "BX11",
+          "lastMessageTimeStamp": currentMessageTimeStamp,
+        }, {merge: true});
+
+        responseToUserText = {
+          "messaging_product": "whatsapp",
+          "to": userPhoneNumber,
+          "type": "interactive",
+          "interactive": {
+            "type": "button",
+            "body": {
+              "text": " How can we be of assistance today?",
+            },
+            "action": {
+              "buttons": [
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "BX11.VM",
+                    "title": "View Menu",
+                  },
+                },
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "BX11.BP",
+                    "title": "Browse Products",
+                  },
+                },
+              ],
+            },
+          },
+        };
+      }
+    }
+
+    axios({
+      method: "POST",
+      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+      data: responseToUserText,
+      headers: {"Content-Type": "application/json"},
+    }).catch(function(error) {
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+      docRef.add({
+        "mapBXerror": "axios error for map BX is:" + error.message,
+        "isResolved": false,
+      });
+    });
+
+    resolve();
+  });
+}
+
+function mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, countryCode, previousChatFlowMapID, userTextMessage, addressLatitude, addressLongitude, addressFull, addressName) {
+  let responseToUserText = {};
+  return new Promise((resolve, reject) => {
+    switch (chatFlowMapID) {
+      case "BZ0":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BZ0.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BZ2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 1 of 2 - Account Backup*\n\nWhat email address can we use to contact you if you ever lose access to this number?",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BZ0.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "A6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok 😃. Send us a message when you need our assistance and we will respond with a menu of options.",
+              },
+            };
+          } else {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "A6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": " How can we be of assistance today?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.VM",
+                        "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.BP",
+                        "title": "Browse Products",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "BZ1":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "BZ2",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "to": userPhoneNumber,
+            "text": {
+              "body": "*Step 1 of 2 - Account Backup*\n\nWhat email address can we use to contact you if you ever lose access to this number?",
+            },
+          };
+        }
+        break;
+      case "BZ2":
+        {
+          if (messageType == "text") {
+            if (userTextMessage.trim().length < 5) {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "Oops! It seems you did not enter a valid email address 🥴.\n\nWhat email address can we use to reach you if we fail to reach you on this number?",
+                },
+              };
+            } else {
+              const re = /\S+@\S+\.\S+/;
+              const rex = re.test(userTextMessage.toLowerCase());
+              if (rex == false) {
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber.toLowerCase(),
+                  "text": {
+                    "body": "Oops! It seems you did not enter a valid email address.\nWhat email address can we use to reach you if we fail to reach you on this number?",
+                  },
+                };
+              } else {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "chatFlowMapID": "BZ3",
+                  "userEmail": userTextMessage.trim().toLowerCase(),
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                }, {merge: true});
+
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "button",
+                    "body": {
+                      "text": `You entered *${userTextMessage.trim().toLowerCase()}* as your email address. Is this correct?`,
+                    },
+                    "action": {
+                      "buttons": [
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "BZ3.YES",
+                            "title": "Yes",
+                          },
+                        },
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "BZ3.NO",
+                            "title": "No",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                };
+              }
+            }
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber.toLowerCase(),
+              "text": {
+                "body": "Oops! It seems you did not enter a valid email address.\n\nWhat email address can we use to reach you if we fail to reach you on this number?",
+              },
+            };
+          }
+        }
+        break;
+      case "BZ3":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BZ3.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BZ4",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 2 of 2 - Business Address*\n\nPlease send us your business address using the Whatsapp location feature.\n\nThis location must be accessible to delivery drivers for product pick-ups.",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BZ3.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BZ2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok. Lets try again 😀.\n\nWhat email address can we use to reach you if we fail to reach you on this number?",
+              },
+            };
+          }
+        }
+        break;
+      case "BZ4":
+        {
+          if (messageType == "location") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              addressLatitude,
+              addressLongitude,
+              addressFull,
+              addressName,
+              "chatFlowMapID": "BZ5",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": `You entered ${addressFull} as your address. Is this correct?`,
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BZ5.YES",
+                        "title": "Yes",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BZ5.NO",
+                        "title": "No",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "Please send us your business address using the *Whatsapp location feature*.\n\nThis location must be accessible to delivery drivers for product pick-ups.",
+              },
+            };
+          }
+        }
+        break;
+      case "BZ5":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BZ5.YES") {
+            // Check if user was persorming p2pTransfer or productPuchase or accountBalanceCheck or profileCheck
+            if (previousChatFlowMapID == "H0") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "00",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseMenu = merchantListMenu;
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": `${userPhoneNumber}`,
+                "type": "interactive",
+                "interactive": {
+                  "type": "list",
+                  "body": {
+                    "text": "🎉 Congratulations on becoming a registered seller! 🎉\n\nTo proceed, please choose an option from the *Seller Services* menu below.",
+                  },
+                  "action": {
+                    "button": "Select an option",
+                    "sections": [
+                      {
+
+                        "rows": responseMenu,
+                      },
+                    ],
+                  },
+                },
+              };
+            } else {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "BZ6",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": " How can we be of assistance today?",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "BZ6.VM",
+                          "title": "View Menu",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "BZ6.BP",
+                          "title": "Browse Products",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          } else if (messageType == "buttonReply" && buttonReplyID == "BZ5.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "BZ4",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "That's ok. Lets try again 😀.\n\nPlease send us your business address using the *Whatsapp location feature*.\n\nThis location must be accessible to delivery drivers for product pick-ups.",
+              },
+            };
+          }
+        }
+        break;
+      case "BZ6":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "BZ6.VM") {
+            responseMenu = consumerListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "00",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick an option from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BZ6.BP") {
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "D2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": " How can we be of assistance today?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BZ6.VM",
+                        "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BZ6.BP",
+                        "title": "Browse Products",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      default:
+      {
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+        docRef.set({
+          "chatFlowMapID": "BZ6",
+          "lastMessageTimeStamp": currentMessageTimeStamp,
+        }, {merge: true});
+
+        responseToUserText = {
+          "messaging_product": "whatsapp",
+          "to": userPhoneNumber,
+          "type": "interactive",
+          "interactive": {
+            "type": "button",
+            "body": {
+              "text": " How can we be of assistance today?",
+            },
+            "action": {
+              "buttons": [
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "BZ6.VM",
+                    "title": "View Menu",
+                  },
+                },
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "BZ6.BP",
+                    "title": "Browse Products",
+                  },
+                },
+              ],
+            },
+          },
+        };
+      }
+    }
+
+    axios({
+      method: "POST",
+      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+      data: responseToUserText,
+      headers: {"Content-Type": "application/json"},
+    }).catch(function(error) {
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+      docRef.add({
+        "mapBZerror": "axios error for map BZ is:" + error.message,
+        "isResolved": false,
+      });
+    });
+
+    resolve();
+  });
+}
+
+function mapC() {
+  return new Promise((resolve, reject) => {
+    sendFiveSearchResults();
+    resolve();
+  });
+}
+
+function mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex) {
+  let responseToUserText = {};
+  return new Promise((resolve, reject) => {
+    if (listReplyID && categoryListReplyIDs[listReplyID] != undefined) {
+      switch (listReplyID) {
+        case "1":
+          {
+            responseMenu = clothingSubCategoryListMenu;
+          }
+          break;
+        case "2":
+          {
+            responseMenu = shoesSubCategoryListMenu;
+          }
+          break;
+        case "3":
+          {
+            responseMenu = watchesnJewelrySubCategoryListMenu;
+          }
+          break;
+        case "4":
+          {
+            responseMenu = beautySubCategoryListMenu;
+          }
+          break;
+        case "5":
+          {
+            responseMenu = fragrancesSubCategoryListMenu;
+          }
+          break;
+        case "6":
+          {
+            responseMenu = homenGardenSubCategoryListMenu;
+          }
+          break;
+        case "7":
+          {
+            responseMenu = toysnGamesSubCategoryListMenu;
+          }
+          break;
+        case "8":
+          {
+            responseMenu = sportsSubCategoryListMenu;
+          }
+          break;
+        case "9":
+          {
+            responseMenu = electronicsSubCategoryListMenu;
+          }
+          break;
+        case "10":
+          {
+            responseMenu = automotiveSubCategoryListMenu;
+          }
+          break;
+      }
+    }
+
+    switch (chatFlowMapID) {
+      case "D1":
+        {
+          responseMenu = categoryListMenu;
+
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "D2",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": `${userPhoneNumber}`,
+            "type": "interactive",
+            "interactive": {
+              "type": "list",
+              "body": {
+                "text": "Please pick a category from the menu below.",
+              },
+              "action": {
+                "button": "Select an option",
+                "sections": [
+                  {
+
+                    "rows": responseMenu,
+                  },
+                ],
+              },
+            },
+          };
+        }
+        break;
+      case "D2":
+        {
+          if (messageType == "listReply" && categoryListReplyIDs[listReplyID] != undefined) {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "D3",
+              "currentBrowseProductsIndex": 0,
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a sub-category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseMenu = categoryListMenu;
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "D3":
+        {
+          if (messageType == "listReply") {
+            if ((listReplyID.split(".")[0] !== undefined) && (listReplyID.split(".")[0].length <= 1) && (listReplyID.split(".")[1] !== undefined) && (listReplyID.split(".")[1].length <= 1)) {
+              const productCategory = listReplyID;
+              sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex);
+            } else {
+              responseMenu = categoryListMenu;
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "D2",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": `${userPhoneNumber}`,
+                "type": "interactive",
+                "interactive": {
+                  "type": "list",
+                  "body": {
+                    "text": "Please pick a category from the menu below.",
+                  },
+                  "action": {
+                    "button": "Select an option",
+                    "sections": [
+                      {
+
+                        "rows": responseMenu,
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          } else {
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "D2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+        // case "D4":
+        //   {}
+        //   break;
+        // case "D5":
+        //   {}
+        //   break;
+        // case "D6":
+        //   {}
+        // break;
+      default:
+      {
+        responseMenu = categoryListMenu;
+
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+        docRef.set({
+          "chatFlowMapID": "D2",
+          "lastMessageTimeStamp": currentMessageTimeStamp,
+        }, {merge: true});
+
+        responseToUserText = {
+          "messaging_product": "whatsapp",
+          "recipient_type": "individual",
+          "to": `${userPhoneNumber}`,
+          "type": "interactive",
+          "interactive": {
+            "type": "list",
+            "body": {
+              "text": "Please pick a category from the menu below.",
+            },
+            "action": {
+              "button": "Select an option",
+              "sections": [
+                {
+
+                  "rows": responseMenu,
+                },
+              ],
+            },
+          },
+        };
+      }
+    }
+
+    axios({
+      method: "POST",
+      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+      data: responseToUserText,
+      headers: {"Content-Type": "application/json"},
+    }).catch(function(error) {
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+      docRef.add({
+        "mapDerror": "axios error for map D is:" + error.message,
+        "isResolved": false,
+      });
+    });
+
+    resolve();
+  });
+}
+
+function mapE() {
+  return new Promise((resolve, reject) => {
+    resolve();
+  });
+}
+
+function mapF() {
+  return new Promise((resolve, reject) => {
+    resolve();
+  });
+}
+
+function mapG() {
+  return new Promise((resolve, reject) => {
+    resolve();
+  });
+}
+
+function mapI() {
+  return new Promise((resolve, reject) => {
+    resolve();
+  });
+}
+
+function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, listReplyID, countryCode, userTextMessage, currentProductID, lastMessageTimeStamp) {
+  let responseToUserText = {};
+
+  return new Promise((resolve, reject) => {
+    switch (chatFlowMapID) {
+      case "J1":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "J2",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "to": userPhoneNumber,
+            "text": {
+              "body": "*Step 1 of 5 - Product Link*\n\nPlease share a link to the product in your whatsapp catalog with us.\n\n The link should look something like this:\n\n_https://wa.me/p/4838928229/2637218383_",
+            },
+          };
+        }
+        break;
+      case "J2":
+        {
+          if (messageType == "text") {
+            const urls = extractUrls(userTextMessage.trim());
+
+            if (urls) {
+              const productLink = urls[0];
+              const productLinkElementsArray = productLink.split("/");
+
+              if (productLinkElementsArray.length == 6 && productLinkElementsArray[0] == "https:" && productLinkElementsArray[2] == "wa.me" && productLinkElementsArray[3] == "p") {
+                if (productLinkElementsArray[5] == userPhoneNumber) {
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "to": userPhoneNumber,
+                    "text": {
+                      "body": "One moment please...",
+                    },
+                  };
+
+                  axios({
+                    method: "POST",
+                    url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                    data: responseToUserText,
+                    headers: {"Content-Type": "application/json"},
+                  }).catch(function(error) {
+                    const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                    docRef.add({
+                      "mapJerror": "axios error for map J2 is:" + error.message,
+                      "isResolved": false,
+                    });
+                  });
+
+                  j2Extension(countryCode, productLink, userName, userPhoneNumber, currentMessageTimeStamp);
+                } else {
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "to": userPhoneNumber,
+                    "text": {
+                      "body": "The whatsapp product link you shared is for a product in another users catalog.\n\nPlease share a link to the product in your own whatsapp catalog with us.\n\n The link should look something like this:\n\n_https://wa.me/p/4838928229/2637218383_",
+                    },
+                  };
+
+                  axios({
+                    method: "POST",
+                    url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                    data: responseToUserText,
+                    headers: {"Content-Type": "application/json"},
+                  }).catch(function(error) {
+                    const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                    docRef.add({
+                      "mapJerror": "axios error for map J2 is:" + error.message,
+                      "isResolved": false,
+                    });
+                  });
+                }
+              } else {
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "text": {
+                    "body": "Oops! It seems you did not share a link to a product in your whatsapp catalog 🥴.\n\nPlease share a link to the product in your whatsapp catalog with us.\n\n The link should look something like this:\n\n_https://wa.me/p/4838928229/2637218383_",
+                  },
+                };
+
+                axios({
+                  method: "POST",
+                  url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                  data: responseToUserText,
+                  headers: {"Content-Type": "application/json"},
+                }).catch(function(error) {
+                  const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                  docRef.add({
+                    "mapJerror": "axios error for map J2 is:" + error.message,
+                    "isResolved": false,
+                  });
+                });
+              }
+            } else {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "Oops! It seems you did not share a link to a product in your whatsapp catalog 🥴.\n\nPlease share a link to the product in your whatsapp catalog with us.\n\n The link should look something like this:\n\n_https://wa.me/p/4838928229/2637218383_",
+                },
+              };
+
+              axios({
+                method: "POST",
+                url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                data: responseToUserText,
+                headers: {"Content-Type": "application/json"},
+              }).catch(function(error) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                docRef.add({
+                  "mapJerror": "axios error for map J2 is:" + error.message,
+                  "isResolved": false,
+                });
+              });
+            }
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "Oops! It seems you did not share a link to a product in your whatsapp catalog 🥴.\n\nPlease share a link to the product in your whatsapp catalog with us.\n\n The link should look something like this:\n\n_https://wa.me/p/4838928229/2637218383_",
+              },
+            };
+
+            axios({
+              method: "POST",
+              url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+              data: responseToUserText,
+              headers: {"Content-Type": "application/json"},
+            }).catch(function(error) {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+              docRef.add({
+                "mapJerror": "axios error for map J2 is:" + error.message,
+                "isResolved": false,
+              });
+            });
+          }
+        }
+        break;
+      case "J3":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "J3.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J4",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "Please list each size you have available, separated by a comma.\n\nE.g. If you offer sizes 5, 7, and 12, your respond should be👇🏾\n5, 7, 12.\n\nYou can also send words like small, medium, extra large.\n\nThe maximum number of sizes is 10",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "J3.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": "*Step 3 of 5 - Product Colors*\n\nDo you offer this product in different colors?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J6.YES",
+                        "title": "Yes",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J6.NO",
+                        "title": "No",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "J4":
+        {
+          if (messageType == "text") {
+            const productSizesArray = userTextMessage.trim().split(",");
+            if (productSizesArray[0] && productSizesArray.length <= 10) {
+              const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+              productRef.set({
+                "productSizes": productSizesArray,
+              }, {merge: true});
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "J5",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              let appendedSizeList = "";
+              productSizesArray.forEach((element) => appendedSizeList += "➣ " + element.trim() + "\n");
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": `You entered the following size options:\n\n${appendedSizeList}\nIs this correct?`,
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "J5.YES",
+                          "title": "Yes",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "J5.NO",
+                          "title": "No",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            } else {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "Error saving available sizes.\n\nPlease list 10 or less sizes, seperated by a comma.\n\n*For Example*\nIf you offer sizes 5, 7, and 12, send us a message like this 👇🏾\n\n5, 7, 12\n\nYou can also send words like\nsmall, medium, extra large",
+                },
+              };
+            }
+          } else {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J3",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": "We seem to have missed your response.\n\nDo you offer different sizes for this product?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J3.YES",
+                        "title": "Yes",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J3.NO",
+                        "title": "No",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "J5":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "J5.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": "*Step 3 of 5 - Product Colors*\n\nDo you offer this product in different colors?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J6.YES",
+                        "title": "Yes",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J6.NO",
+                        "title": "No",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "J5.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J4",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "No worries, lets try again 😃.\n\nPlease list 10 or less sizes, seperated by a comma.\n\n*For Example*\nIf you offer sizes 5, 7, and 12, send us a message like this 👇🏾\n\n5, 7, 12\n\nYou can also send words like\nsmall, medium, extra large",
+              },
+            };
+          }
+        }
+        break;
+      case "J6":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "J6.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J7",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "Please list each color you have available, separated by a comma.\n\nE.g. If you offer red, navy blue, and orange, your respond should be👇🏾\nred, navy blue, orange.\n\nThe maximum number of colors is 10",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "J6.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J9",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "What keywords and key-phrases will users search for when looking for your product?\n\nPlease list up to 5 keywords and key-phrases, each separated by a comma.\n\nAn example of key words and phrases👇🏾\nbirthday, present, gift, birthday present for husband, birthday present ideas",
+              },
+            };
+          }
+        }
+        break;
+      case "J7":
+        {
+          if (messageType == "text") {
+            const productColorArray = userTextMessage.trim().split(",");
+            if (productColorArray[0] && productColorArray.length <= 10) {
+              const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+              productRef.set({
+                "productColors": productColorArray,
+              }, {merge: true});
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "J8",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              let appendedColorList = "";
+              productColorArray.forEach((element) => appendedColorList += "➣ " + element.trim() + "\n");
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": `You entered the following color options:\n\n${appendedColorList}\nIs this correct?`,
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "J8.YES",
+                          "title": "Yes",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "J8.NO",
+                          "title": "No",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            } else {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "We seem to have missed your response.\n\nPlease list each color you have available, separated by a comma.\n\nE.g. If you offer red, navy blue, and orange, your respond should be👇🏾\nred, navy blue, orange.\n\nThe maximum number of colors is 10",
+                },
+              };
+            }
+          } else {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": "We seem to have missed your response.\n\nDo you offer different colors for this product?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J6.YES",
+                        "title": "Yes",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J6.NO",
+                        "title": "No",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "J8":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "J8.YES") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J9",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 4 of 5 - Product Keywords*\n\nWhat keywords and key-phrases will users search for when looking for your product?\n\nPlease list up to 5 keywords and key-phrases, each separated by a comma.\n\nAn example of key words and phrases👇🏾\nbirthday, present, gift, birthday present for husband, birthday present ideas",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "J8.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J7",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "No worries, lets try again 😃.\n\nPlease list 10 or less colors, seperated by a comma.\n\n*For Example*\nIf you offer red, navy blue, and orange,your respond should be👇🏾\nred, navy blue, orange",
+              },
+            };
+          }
+        }
+        break;
+      case "J9":
+        {
+          if (messageType == "text") {
+            const productKeysArray = userTextMessage.trim().split(",");
+            if (productKeysArray[0] && productKeysArray.length <= 5) {
+              const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+              productRef.set({
+                "productKeys": productKeysArray,
+              }, {merge: true});
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "J10",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              let appendedKeysList = "";
+              productKeysArray.forEach((element) => appendedKeysList += "➣ " + element.trim() + "\n");
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": `You entered the following keywords and key-phrases:\n\n${appendedKeysList}\nIs this correct?`,
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "J10.YES",
+                          "title": "Yes",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "J10.NO",
+                          "title": "No",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            } else {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "We seem to have missed your response.\n\nPlease list up to 5 keywords and key-phrases, separated by a comma.\n\nAn example of key words and phrases👇🏾\nbirthday, present, gift, birthday present for husband, birthday present ideas",
+                },
+              };
+            }
+          } else {
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 4 of 5 - Product Keywords*\n\nWhat keywords and key-phrases will users search for when looking for your product?\n\nPlease list up to 5 keywords and key-phrases, each separated by a comma.\n\nAn example of key words and phrases👇🏾\nbirthday, present, gift, birthday present for husband, birthday present ideas",
+              },
+            };
+          }
+        }
+        break;
+      case "J10":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "J10.YES") {
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J11",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "*Step 5 of 5 - Product Category*\n\nUse the list below to choose the category your product belongs to.",
+                },
+                "action": {
+                  "button": "Choose a category",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "J10.NO") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J9",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "No worries, lets try again 😃.\n\nPlease list 5 or less keywords and key-phrases, seperated by a comma.\n\nAn example of key words and phrases👇🏾\nbirthday, present, gift, birthday present for husband, birthday present ideas",
+              },
+            };
+          }
+        }
+        break;
+      case "J11":
+        {
+          if (listReplyID && categoryListReplyIDs[listReplyID] != undefined) {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J12",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            switch (listReplyID) {
+              case "1":
+                {
+                  responseMenu = clothingSubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "2":
+                {
+                  responseMenu = shoesSubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "3":
+                {
+                  responseMenu = watchesnJewelrySubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "4":
+                {
+                  responseMenu = beautySubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "5":
+                {
+                  responseMenu = fragrancesSubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "6":
+                {
+                  responseMenu = homenGardenSubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "7":
+                {
+                  responseMenu = toysnGamesSubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "8":
+                {
+                  responseMenu = sportsSubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "9":
+                {
+                  responseMenu = electronicsSubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              case "10":
+                {
+                  responseMenu = automotiveSubCategoryListMenu;
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": `${userPhoneNumber}`,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "list",
+                      "body": {
+                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                      },
+                      "action": {
+                        "button": "Choose a category",
+                        "sections": [
+                          {
+
+                            "rows": responseMenu,
+                          },
+                        ],
+                      },
+                    },
+                  };
+                }
+                break;
+              default:
+              {
+                responseMenu = categoryListMenu;
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "recipient_type": "individual",
+                  "to": `${userPhoneNumber}`,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "list",
+                    "body": {
+                      "text": "*Step 5 of 5 - Product Category*\n\nUse the list below to choose the category your product belongs to.",
+                    },
+                    "action": {
+                      "button": "Choose a category",
+                      "sections": [
+                        {
+
+                          "rows": responseMenu,
+                        },
+                      ],
+                    },
+                  },
+                };
+              }
+            }
+          } else {
+            responseMenu = categoryListMenu;
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "*Step 5 of 5 - Product Category*\n\nUse the list below to choose the category your product belongs to.",
+                },
+                "action": {
+                  "button": "Choose a category",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "J12":
+        {
+          if (messageType == "listReply") {
+            const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+            productRef.set({
+              "productCategory": listReplyID,
+            }, {merge: true});
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J13",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": "*Congratulations on listing your product!*\n\nYou can view and edit this product in the View Product section of the seller services menu.\n\nWhat would you like to do now?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J13.LAP",
+                        "title": "List Another Product",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "J13.VM",
+                        "title": "View Products",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          } else {
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J11",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "*Step 5 of 5 - Product Category*\n\nUse the list below to choose the category your product belongs to.",
+                },
+                "action": {
+                  "button": "Choose a category",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      case "J13":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "J13.LAP") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 1 of 5 - Product Link*\n\nPlease share a link to the product in your whatsapp catalog with us.\n\n The link should look something like this:\n\n_https://wa.me/p/4838928229/2637218383_",
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID == "J13.VM") {
+            responseMenu = consumerListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "00",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick an option from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          }
+        }
+        break;
+      default:
+      {
+        responseMenu = consumerListMenu;
+
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+        docRef.set({
+          "chatFlowMapID": "00",
+          "lastMessageTimeStamp": currentMessageTimeStamp,
+        }, {merge: true});
+
+        responseToUserText = {
+          "messaging_product": "whatsapp",
+          "recipient_type": "individual",
+          "to": `${userPhoneNumber}`,
+          "type": "interactive",
+          "interactive": {
+            "type": "list",
+            "body": {
+              "text": "Please pick an option from the menu below.",
+            },
+            "action": {
+              "button": "Select an option",
+              "sections": [
+                {
+
+                  "rows": responseMenu,
+                },
+              ],
+            },
+          },
+        };
+      }
+    }
+
+    if (chatFlowMapID !== "J2") {
+      axios({
+        method: "POST",
+        url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+        data: responseToUserText,
+        headers: {"Content-Type": "application/json"},
+      }).catch(function(error) {
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+        docRef.add({
+          "mapJerror": "axios error for map J is:" + error.message,
+          "isResolved": false,
+        });
+      });
+    }
+
+
+    resolve();
+  });
+}
+
+function mapK() {
+  return new Promise((resolve, reject) => {
+    resolve();
+  });
+}
+
+function mapL() {
+  return new Promise((resolve, reject) => {
+    resolve();
+  });
+}
+
+function mapM() {
+  return new Promise((resolve, reject) => {
+    resolve();
+  });
+}
+
+function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStamp, countryCode, registeredUser, registeredMerchant, buttonReplyID) {
+  let responseToUserText = {};
+  let chatFlowMapID = "";
+  let yesButtonID = "";
+  let noButtonID = "";
+
+  return new Promise((resolve, reject) => {
+    // send response message to user
+    if (messageType == "listReply") {
+      switch (listReplyID) {
+        // case "B0":
+        //   {
+
+        //   }
+        //   break;
+        // case "C0":
+        //   {
+
+        //   }
+        //   break;
+        case "D0":
+          {
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "D2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          }
+          break;
+        case "E0":
+          {
+            if (registeredUser) {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "E2",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "Placeholder text for E2 service resumption",
+                },
+              };
+            } else {
+              chatFlowMapID = "B0";
+              yesButtonID = "B0.YES";
+              noButtonID = "B0.NO";
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": chatFlowMapID,
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+                "previousChatFlowMapID": "E0",
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "It looks like you are not yet a registered user.\n\nOnly registered sellers can access account balance features.\n\nWould you like to become a registered user?",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": yesButtonID,
+                          "title": "Yes",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": noButtonID,
+                          "title": "No, not today",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          }
+          break;
+        case "F0":
+          {
+            if (registeredUser) {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "F2",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "Placeholder text for F2 service resumption",
+                },
+              };
+            } else {
+              chatFlowMapID = "B0";
+              yesButtonID = "B0.YES";
+              noButtonID = "B0.NO";
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": chatFlowMapID,
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+                "previousChatFlowMapID": "F0",
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "It looks like you are not yet a registered user.\n\nOnly registered sellers can access perform peer-to-peer transfers.\n\nWould you like to become a registered user?",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": yesButtonID,
+                          "title": "Yes",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": noButtonID,
+                          "title": "No, not today",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          }
+          break;
+        case "G0":
+          {
+            if (registeredUser) {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "G2",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "text": {
+                  "body": "Placeholder text for G2 service resumption",
+                },
+              };
+            } else {
+              chatFlowMapID = "B0";
+              yesButtonID = "B0.YES";
+              noButtonID = "B0.NO";
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": chatFlowMapID,
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+                "previousChatFlowMapID": "G0",
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "It looks like you are not yet a registered user.\n\nOnly registered sellers can access user profile features.\n\nWould you like to become a registered user?",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": yesButtonID,
+                          "title": "Yes",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": noButtonID,
+                          "title": "No, not today",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          }
+          break;
+        case "H0":
+          {
+            if (registeredMerchant) {
+              responseMenu = merchantListMenu;
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": `${userPhoneNumber}`,
+                "type": "interactive",
+                "interactive": {
+                  "type": "list",
+                  "body": {
+                    "text": "To proceed, please choose an option from the *Seller Services* menu below.",
+                  },
+                  "action": {
+                    "button": "Select an option",
+                    "sections": [
+                      {
+
+                        "rows": responseMenu,
+                      },
+                    ],
+                  },
+                },
+              };
+            } else {
+              if (registeredUser) {
+                chatFlowMapID = "BZ0";
+                yesButtonID = "BZ0.YES";
+                noButtonID = "BZ0.NO";
+              } else {
+                chatFlowMapID = "BX0";
+                yesButtonID = "BX0.YES";
+                noButtonID = "BX0.NO";
+              }
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": chatFlowMapID,
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+                "previousChatFlowMapID": "H0",
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "It looks like you are not yet a registered seller.\n\nOnly registered sellers can sell products on Tapfuma.\n\nWould you like to become a registered seller?",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": yesButtonID,
+                          "title": "Yes",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": noButtonID,
+                          "title": "No, not today",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          }
+          break;
+          // case "I0":
+          //   {
+
+
+          //   }
+          //   break;
+        case "J0":
+          {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "J2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "*Step 1 of 5 - Product Link*\n\nPlease share a link to the product in your whatsapp catalog with us.\n\n The link should look something like this:\n\n_https://wa.me/p/4838928229/2637218383_",
+              },
+            };
+          }
+          break;
+          // case "K0":
+          //   {
+
+          //   }
+          //   break;
+          // case "L0":
+          //   {
+
+          //   }
+          //   break;
+          // case "M0":
+          //   {
+
+          //   }
+          //   break;
+        case "N0":
+          {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "A6",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "type": "interactive",
+              "interactive": {
+                "type": "button",
+                "body": {
+                  "text": " How can we be of assistance today?",
+                },
+                "action": {
+                  "buttons": [
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.VM",
+                        "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.BP",
+                        "title": "Browse Products",
+                      },
+                    },
+                  ],
+                },
+              },
+            };
+          }
+          break;
+        default:
+        {
+          responseMenu = consumerListMenu;
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": `${userPhoneNumber}`,
+            "type": "interactive",
+            "interactive": {
+              "type": "list",
+              "body": {
+                "text": "Choose the \"⭐️ Browse Products\" option from the menu below to view fun products and services.",
+              },
+              "action": {
+                "button": "Select an option",
+                "sections": [
+                  {
+
+                    "rows": responseMenu,
+                  },
+                ],
+              },
+            },
+          };
+        }
+      }
+    } else {
+      if (messageType == "buttonReply" && buttonReplyID == "J0") {
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+        docRef.set({
+          "chatFlowMapID": "J1",
+          "lastMessageTimeStamp": currentMessageTimeStamp,
+        }, {merge: true});
+
+        responseToUserText = {
+          "messaging_product": "whatsapp",
+          "to": userPhoneNumber,
+          "text": {
+            "body": "*Step 1 of 5 - List Product*\n\nPlease share a link to the product in your whatsapp catalog with us.\n\n The link should look something like this:\n\n_https://wa.me/p/4838928229/2637218383_",
+          },
+        };
+      } else {
+        responseMenu = consumerListMenu;
+
+        responseToUserText = {
+          "messaging_product": "whatsapp",
+          "recipient_type": "individual",
+          "to": `${userPhoneNumber}`,
+          "type": "interactive",
+          "interactive": {
+            "type": "list",
+            "body": {
+              "text": "How can we be of assistance to you? 😃\n\nChoose the \"⭐️ Browse Products\" option from the menu below to view fun products and services.",
+            },
+            "action": {
+              "button": "Select an option",
+              "sections": [
+                {
+
+                  "rows": responseMenu,
+                },
+              ],
+            },
+          },
+        };
+      }
+    }
 
     axios({
       method: "POST",
@@ -933,23 +5279,13 @@ function sendOnboardingResponse(userPhoneNumber, userName, chatFlowMapID, lastMe
     }).catch(function(error) {
       const docRef5 = fs.collection("errors");
       docRef5.add({
-        "errorMessage": {error},
+        "errorMessage": "axios error for sendMenuSelection is:" + error.message,
       });
     });
-
 
     resolve();
   });
 }
 
-
-router.put("/:id", async (req, res) => {
-  res.send({"Hello": "PUT"});
-});
-
-router.delete("/:id", async (req, res) => {
-  res.send({"Hello": "DELETE"});
-});
-
+// END API - EXPORT ONLY AFTER THIS
 module.exports = router;
-
