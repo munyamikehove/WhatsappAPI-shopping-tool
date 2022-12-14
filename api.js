@@ -43,7 +43,7 @@ const map00IDs = {"00": "00"};
 const supportedCountryCodes = {"GY": "GY", "PG": "PG", "SB": "SB", "VU": "VU", "FJ": "FJ", "AG": "AG", "DM": "DM", "LC": "LC", "VC": "VC", "GD": "GD", "BB": "BB", "TT": "TT", "LK": "LK", "IN": "IN", "BD": "BD", "PR": "PR", "BS": "BS", "JM": "JM", "BZ": "BZ", "HK": "HK", "SG": "SG", "SL": "SL", "MU": "MU", "PH": "PH", "CA": "CA", "ZA": "ZA", "LS": "LS", "SZ": "SZ", "ZW": "ZW", "BW": "BW", "ZM": "ZM", "NA": "NA", "MW": "MW", "TZ": "TZ", "KE": "KE", "BI": "BI", "RW": "RW", "UG": "UG", "US": "US", "GB": "GB", "AU": "AU", "NZ": "NZ", "IE": "IE", "NG": "NG", "LB": "LB", "AE": "AE", "QA": "QA"};
 const supportedCurrencyCodes = {"GY": "gyd", "PG": "pgk", "SB": "sbd", "VU": "vuv", "FJ": "fjd", "AG": "xcd", "DM": "xcd", "LC": "xcd", "VC": "xcd", "GD": "xcd", "BB": "bbd", "TT": "ttd", "LK": "lkr", "IN": "inr", "BD": "bdt", "PR": "usd", "BS": "bsd", "JM": "jmd", "BZ": "bzd", "HK": "hkd", "SG": "sgd", "SL": "sll", "MU": "mur", "PH": "php", "CA": "cad", "ZA": "zar", "LS": "lsl", "SZ": "szl", "ZW": "usd", "BW": "bwp", "ZM": "zmw", "NA": "nad", "MW": "mwk", "TZ": "tzs", "KE": "kes", "BI": "bif", "RW": "rwf", "UG": "ugx", "US": "usd", "GB": "gbp", "AU": "aud", "NZ": "nzd", "IE": "eur", "NG": "ngn", "LB": "usd", "AE": "aed", "QA": "qar"};
 const initialBalanceTransaction = {"GY": -2098, "PG": -35, "SB": -82, "VU": -122, "FJ": -23, "AG": -27, "DM": -27, "LC": -27, "VC": -27, "GD": -27, "BB": -20, "TT": -68, "LK": -3686, "IN": -817, "BD": -1060, "PR": -10, "BS": -10, "JM": -1543, "BZ": -20, "HK": -78, "SG": -14, "SL": -176500, "MU": -438, "PH": -581, "CA": -14, "ZA": -178, "LS": -177, "SZ": -179, "ZW": -10, "BW": -133, "ZM": -164, "NA": -177, "MW": -10271, "TZ": -23300, "KE": -1218, "BI": -207, "RW": -107, "UG": -378, "US": -10, "GB": -8, "AU": -16, "NZ": -17, "IE": -10, "NG": -4403, "LB": -10, "AE": -37, "QA": -36};
-const categoryListReplyIDs = {"1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "10": "10"};
+const categoryListReplyIDs = {"0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "10": "10"};
 const keyResponseList = {"end": "end", "stop": "stop", "back": "back", "home": "home", "menu": "menu", "esc": "esc", "x": "x"};
 const consumerListMenu = [
   {
@@ -99,6 +99,10 @@ const merchantListMenu = [
 ];
 const categoryListMenu = [
   {
+    "id": "0",
+    "title": "🔥 Trending",
+  },
+  {
     "id": "1",
     "title": "🥻 Clothing",
   },
@@ -133,10 +137,6 @@ const categoryListMenu = [
   {
     "id": "9",
     "title": "💻 Electronics",
-  },
-  {
-    "id": "10",
-    "title": "🏎️ Automotive",
   },
 ];
 const clothingSubCategoryListMenu = [
@@ -365,48 +365,49 @@ const electronicsSubCategoryListMenu = [
     "title": "Batteries",
   },
 ];
-const automotiveSubCategoryListMenu = [
-  {
-    "id": "10.1",
-    "title": "Tires and Wheels",
-  },
-  {
-    "id": "10.2",
-    "title": "Batteries",
-  },
-  {
-    "id": "10.3",
-    "title": "Wiper blades and parts",
-  },
-  {
-    "id": "10.4",
-    "title": "Transmission fluids",
-  },
-  {
-    "id": "10.5",
-    "title": "Engine oils ",
-  },
-  {
-    "id": "10.6",
-    "title": "Gear oils & Grease",
-  },
-  {
-    "id": "10.7",
-    "title": "Filters & PCV Valves",
-  },
-  {
-    "id": "10.8",
-    "title": "Headlights & Bulbs",
-  },
-  {
-    "id": "10.9",
-    "title": "Floor mats & Liners",
-  },
-  {
-    "id": "10.10",
-    "title": "Seat covers & Cushions",
-  },
-];
+// Defer automotive until later on in the growth cycle.
+// const automotiveSubCategoryListMenu = [
+//   {
+//     "id": "10.1",
+//     "title": "Tires and Wheels",
+//   },
+//   {
+//     "id": "10.2",
+//     "title": "Batteries",
+//   },
+//   {
+//     "id": "10.3",
+//     "title": "Wiper blades and parts",
+//   },
+//   {
+//     "id": "10.4",
+//     "title": "Transmission fluids",
+//   },
+//   {
+//     "id": "10.5",
+//     "title": "Engine oils ",
+//   },
+//   {
+//     "id": "10.6",
+//     "title": "Gear oils & Grease",
+//   },
+//   {
+//     "id": "10.7",
+//     "title": "Filters & PCV Valves",
+//   },
+//   {
+//     "id": "10.8",
+//     "title": "Headlights & Bulbs",
+//   },
+//   {
+//     "id": "10.9",
+//     "title": "Floor mats & Liners",
+//   },
+//   {
+//     "id": "10.10",
+//     "title": "Seat covers & Cushions",
+//   },
+// ];
 let userMessageBody = {};
 let responseMenu = [];
 
@@ -826,161 +827,438 @@ function sendFiveSearchResults(userPhoneNumber, countryCode) {
 
 function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex) {
   return new Promise((resolve, reject) => {
-    const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test3");
-    docRef.set({
-      countryCode,
-      productCategory,
-      userPhoneNumber,
-      currentBrowseProductsIndex,
-    }, {merge: true});
     // send 5 browse results
 
     let responseToUserText = {};
+    let productImage = "";
+    let productTitle = "";
+    let productDescription = "";
+    let productPrice = "";
+    let productLink = "";
+    let productID = "";
+    let productReviews = "";
+    let productStars = "";
 
+    responseToUserText = {
+      "messaging_product": "whatsapp",
+      "to": userPhoneNumber,
+      "text": {
+        "body": "Give us a second to find your products......",
+      },
+    };
 
-    const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("productCategory", "==", productCategory).where("live", "==", true);
-    query.get().then((snapShot) => {
-      let counter = 0;
-      snapShot.forEach((doc) => {
-        // doc.data() is never undefined for query doc snapshots
-        const productData = doc.data();
-        const productImage = productData["productImage"];
-        const productTitle = productData["productTitle"];
-        const productDescription = productData["productDescription"];
-        const productPrice = productData["productPrice"];
-        const productLink = productData["productLink"];
-        const productID = doc.id;
+    axios({
+      method: "POST",
+      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+      data: responseToUserText,
+      headers: {"Content-Type": "application/json"},
+    }).catch(function(error) {
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+      docRef.add({
+        "mapJerror": "axios error for sendFiveBrowseResults5 is:" + error.message,
+        "isResolved": false,
+      });
+    });
 
-        if ((counter >= currentBrowseProductsIndex) && (counter <= currentBrowseProductsIndex+5)) {
-          parser(productLink).then((result)=>{
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "recipient_type": "individual",
-              "to": userPhoneNumber,
-              "type": "interactive",
-              "interactive": {
-                "type": "button",
-                "header": {
-                  "type": "image",
-                  "image": {
-                    "link": productImage,
+    if (productCategory == "0") {
+      const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("trending", "==", true).where("live", "==", true);
+      query.get().then((snapShot) => {
+        let counter = 0;
+        const size = snapShot.size;
+
+        if (size <= 0) {
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": userPhoneNumber,
+            "type": "interactive",
+            "interactive": {
+              "type": "button",
+              "body": {
+                "text": "We couldn't find any products in this category.\n\nPlease try a different category or, you could make money by selling the product on Tapfuma💡.",
+              },
+              "action": {
+                "buttons": [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "VOC",
+                      "title": "Change categories",
+                    },
+                  },
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "BAS",
+                      "title": "Become a seller",
+                    },
+                  },
+                ],
+              },
+            },
+          };
+
+          axios({
+            method: "POST",
+            url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+            data: responseToUserText,
+            headers: {"Content-Type": "application/json"},
+          }).catch(function(error) {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+            docRef.add({
+              "mapJerror": "axios error for sendFiveBrowseResults4 is:" + error.message,
+              "isResolved": false,
+            });
+          });
+        } else {
+          snapShot.forEach((doc) => {
+          // doc.data() is never undefined for query doc snapshots
+            const productData = doc.data();
+            let shortenedProductLink = "";
+            productImage = productData["productImage"];
+            productTitle = productData["productTitle"];
+            productDescription = productData["productDescription"];
+            productPrice = productData["productPrice"];
+            productLink = productData["productLink"];
+            productStars = productData["productStars"];
+            productReviews = productData["productReviews"];
+            productID = doc.id;
+
+            if ((counter >= currentBrowseProductsIndex) && (counter <= currentBrowseProductsIndex+10)) {
+              shortenedProductLink = productLink.split("https://")[1].trim();
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "header": {
+                    "type": "image",
+                    "image": {
+                      "link": productImage,
+                    },
+                  },
+                  "body": {
+                    "text": `*${productTitle}*\n${productDescription}\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}`,
+                  },
+                  "footer": {
+                    "text": `${productStars} ${productReviews}`,
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": `VO::${productID}`,
+                          "title": "View Options",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": `ATC::${productID}`,
+                          "title": "Add to cart",
+                        },
+                      },
+                    ],
                   },
                 },
-                "body": {
-                  "text": `*${productTitle}*\n${productDescription}\n${productPrice}\n\nView product👇🏾\n${productLink}`,
-                },
-                "footer": {
-                  "text": "⭐️⭐️⭐️⭐️⭐️ 108",
-                },
-                "action": {
-                  "buttons": [
-                    {
-                      "type": "reply",
-                      "reply": {
-                        "id": productID,
-                        "title": "View Options",
-                      },
-                    },
-                    {
-                      "type": "reply",
-                      "reply": {
-                        "id": productID,
-                        "title": "Add to cart",
-                      },
-                    },
-                  ],
-                },
-              },
-            };
+              };
 
-            axios({
-              method: "POST",
-              url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-              data: responseToUserText,
-              headers: {"Content-Type": "application/json"},
-            }).catch(function(error) {
-              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
-              docRef.add({
-                "mapJerror": "axios error for sendFiveBrowseResults is:" + error.message,
-                "isResolved": false,
+              axios({
+                method: "POST",
+                url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                data: responseToUserText,
+                headers: {"Content-Type": "application/json"},
+              }).then(()=>{
+                counter++;
+
+                if (counter == (currentBrowseProductsIndex+size) || counter == (currentBrowseProductsIndex+10)) {
+                  const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                  docRef.set({
+                    "currentBrowseProductsIndex": (currentBrowseProductsIndex+size),
+                  }, {merge: true});
+
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": userPhoneNumber,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "button",
+                      "body": {
+                        "text": "What would you like to do next?",
+                      },
+                      "action": {
+                        "buttons": [
+                          {
+                            "type": "reply",
+                            "reply": {
+                              "id": "1",
+                              "title": "Change category",
+                            },
+                          },
+                          {
+                            "type": "reply",
+                            "reply": {
+                              "id": "2",
+                              "title": "Checkout",
+                            },
+                          },
+                          {
+                            "type": "reply",
+                            "reply": {
+                              "id": "3",
+                              "title": "View More",
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  };
+
+
+                  axios({
+                    method: "POST",
+                    url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                    data: responseToUserText,
+                    headers: {"Content-Type": "application/json"},
+                  }).catch(function(error) {
+                    const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                    docRef.add({
+                      "mapJerror": "axios error for sendFiveBrowseResults2 is:" + error.message,
+                      "isResolved": false,
+                    });
+                  });
+                }
+              }).catch(function(error) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                docRef.add({
+                  "mapJerror": "axios error for sendFiveBrowseResults1 is:" + error.message,
+                  "isResolved": false,
+                });
               });
-            });
-          }).catch((error)=>{
-            const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
-            productRef.set({
-              "live": false,
-            }, {merge: true});
+
+              parser(productLink).catch((error)=>{
+                const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+                productRef.set({
+                  "live": false,
+                }, {merge: true});
+              });
+            } else {
+              const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test4");
+              docRef.set({
+                "error": "error",
+              }, {merge: true});
+            }
           });
-
-
-          if (counter == (currentBrowseProductsIndex+5) || ) {
-            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
-            docRef.set({
-              "currentBrowseProductsIndex": (currentBrowseProductsIndex+5),
-            }, {merge: true});
-
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "recipient_type": "individual",
-              "to": userPhoneNumber,
-              "type": "interactive",
-              "interactive": {
-                "type": "button",
-                "body": {
-                  "text": "What would you like to do next?",
-                },
-                "action": {
-                  "buttons": [
-                    {
-                      "type": "reply",
-                      "reply": {
-                        "id": productID,
-                        "title": "Change category",
-                      },
-                    },
-                    {
-                      "type": "reply",
-                      "reply": {
-                        "id": productID,
-                        "title": "Checkout",
-                      },
-                    },
-                    {
-                      "type": "reply",
-                      "reply": {
-                        "id": productID,
-                        "title": "View More",
-                      },
-                    },
-                  ],
-                },
-              },
-            };
-
-
-            axios({
-              method: "POST",
-              url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-              data: responseToUserText,
-              headers: {"Content-Type": "application/json"},
-            }).catch(function(error) {
-              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
-              docRef.add({
-                "mapJerror": "axios error for sendFiveBrowseResults is:" + error.message,
-                "isResolved": false,
-              });
-            });
-          }
-
-          counter++;
         }
+      }).catch(function(error) {
+        const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test2");
+        docRef.set({
+          error,
+        }, {merge: true});
       });
-    }).catch(function(error) {
-      const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test2");
-      docRef.set({
-        error,
-      }, {merge: true});
-    });
+    } else {
+      const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("productCategory", "==", productCategory).where("live", "==", true);
+      query.get().then((snapShot) => {
+        let counter = 0;
+        const size = snapShot.size;
+
+        if (size <= 0) {
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": userPhoneNumber,
+            "type": "interactive",
+            "interactive": {
+              "type": "button",
+              "body": {
+                "text": "We couldn't find any products in this category.\n\nPlease try a different category or, you could make money by selling the product on Tapfuma💡.",
+              },
+              "action": {
+                "buttons": [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "VOC",
+                      "title": "Change categories",
+                    },
+                  },
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "BAS",
+                      "title": "Become a seller",
+                    },
+                  },
+                ],
+              },
+            },
+          };
+
+          axios({
+            method: "POST",
+            url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+            data: responseToUserText,
+            headers: {"Content-Type": "application/json"},
+          }).catch(function(error) {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+            docRef.add({
+              "mapJerror": "axios error for sendFiveBrowseResults4 is:" + error.message,
+              "isResolved": false,
+            });
+          });
+        } else {
+          snapShot.forEach((doc) => {
+          // doc.data() is never undefined for query doc snapshots
+            const productData = doc.data();
+            let shortenedProductLink = "";
+            productImage = productData["productImage"];
+            productTitle = productData["productTitle"];
+            productDescription = productData["productDescription"];
+            productPrice = productData["productPrice"];
+            productLink = productData["productLink"];
+            productID = doc.id;
+
+            if ((counter >= currentBrowseProductsIndex) && (counter <= currentBrowseProductsIndex+10)) {
+              shortenedProductLink = productLink.split("https://")[1].trim();
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "header": {
+                    "type": "image",
+                    "image": {
+                      "link": productImage,
+                    },
+                  },
+                  "body": {
+                    "text": `*${productTitle}*\n${productDescription}\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}`,
+                  },
+                  "footer": {
+                    "text": "⭐️⭐️⭐️⭐️⭐️ 108",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": `VO::${productID}`,
+                          "title": "View Options",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": `ATC::${productID}`,
+                          "title": "Add to cart",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+
+              axios({
+                method: "POST",
+                url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                data: responseToUserText,
+                headers: {"Content-Type": "application/json"},
+              }).then(()=>{
+                counter++;
+
+                if (counter == (currentBrowseProductsIndex+size) || counter == (currentBrowseProductsIndex+10)) {
+                  const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                  docRef.set({
+                    "currentBrowseProductsIndex": (currentBrowseProductsIndex+size),
+                  }, {merge: true});
+
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": userPhoneNumber,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "button",
+                      "body": {
+                        "text": "What would you like to do next?",
+                      },
+                      "action": {
+                        "buttons": [
+                          {
+                            "type": "reply",
+                            "reply": {
+                              "id": "1",
+                              "title": "Change category",
+                            },
+                          },
+                          {
+                            "type": "reply",
+                            "reply": {
+                              "id": "2",
+                              "title": "Checkout",
+                            },
+                          },
+                          {
+                            "type": "reply",
+                            "reply": {
+                              "id": "3",
+                              "title": "View More",
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  };
+
+
+                  axios({
+                    method: "POST",
+                    url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                    data: responseToUserText,
+                    headers: {"Content-Type": "application/json"},
+                  }).catch(function(error) {
+                    const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                    docRef.add({
+                      "mapJerror": "axios error for sendFiveBrowseResults2 is:" + error.message,
+                      "isResolved": false,
+                    });
+                  });
+                }
+              }).catch(function(error) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                docRef.add({
+                  "mapJerror": "axios error for sendFiveBrowseResults1 is:" + error.message,
+                  "isResolved": false,
+                });
+              });
+
+              parser(productLink).catch((error)=>{
+                const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+                productRef.set({
+                  "live": false,
+                }, {merge: true});
+              });
+            } else {
+              const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test4");
+              docRef.set({
+                "error": "error",
+              }, {merge: true});
+            }
+          });
+        }
+      }).catch(function(error) {
+        const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test2");
+        docRef.set({
+          error,
+        }, {merge: true});
+      });
+    }
 
 
     return resolve();
@@ -998,12 +1276,12 @@ function j2Extension(countryCode, productLink, userName, userPhoneNumber, curren
           const productTitle = fixedTitleArray[0].trim();
           const productDescription = fixedDescriptionArray[0].trim();
           const productPrice = fixedDescriptionArray[1].trim();
-          productLink = productLink.split("https://")[1].trim();
+
 
           const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts");
           productRef.add({
             userPhoneNumber,
-            "approved": false,
+            "prohibited": false,
             "live": true,
             "outOfStock": false,
             "createdON": currentMessageTimeStamp,
@@ -3413,11 +3691,11 @@ function mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageTy
             responseMenu = electronicsSubCategoryListMenu;
           }
           break;
-        case "10":
-          {
-            responseMenu = automotiveSubCategoryListMenu;
-          }
-          break;
+        // case "10":
+        //   {
+        //     responseMenu = automotiveSubCategoryListMenu;
+        //   }
+        //   break;
       }
     }
 
@@ -3458,34 +3736,46 @@ function mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageTy
       case "D2":
         {
           if (messageType == "listReply" && categoryListReplyIDs[listReplyID] != undefined) {
-            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
-            docRef.set({
-              "chatFlowMapID": "D3",
-              "currentBrowseProductsIndex": 0,
-              "lastMessageTimeStamp": currentMessageTimeStamp,
-            }, {merge: true});
+            if (listReplyID != "0") {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "D3",
+                "currentBrowseProductsIndex": 0,
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
 
-            responseToUserText = {
-              "messaging_product": "whatsapp",
-              "recipient_type": "individual",
-              "to": `${userPhoneNumber}`,
-              "type": "interactive",
-              "interactive": {
-                "type": "list",
-                "body": {
-                  "text": "Please pick a sub-category from the menu below.",
-                },
-                "action": {
-                  "button": "Select an option",
-                  "sections": [
-                    {
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": `${userPhoneNumber}`,
+                "type": "interactive",
+                "interactive": {
+                  "type": "list",
+                  "body": {
+                    "text": "Please pick a sub-category from the menu below.",
+                  },
+                  "action": {
+                    "button": "Select an option",
+                    "sections": [
+                      {
 
-                      "rows": responseMenu,
-                    },
-                  ],
+                        "rows": responseMenu,
+                      },
+                    ],
+                  },
                 },
-              },
-            };
+              };
+            } else {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "currentBrowseProductsIndex": 0,
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              currentBrowseProductsIndex = 0;
+              const productCategory = listReplyID;
+              sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex);
+            }
           } else {
             responseMenu = categoryListMenu;
 
@@ -4059,6 +4349,10 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
               const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
               productRef.set({
                 "productColors": productColorArray,
+                "trending": false,
+                "productReviews": 0,
+                "numberOfPurchases": 0,
+                "productStars": "⭐️⭐️⭐️⭐️⭐️",
               }, {merge: true});
 
               const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
@@ -4541,32 +4835,32 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
                   };
                 }
                 break;
-              case "10":
-                {
-                  responseMenu = automotiveSubCategoryListMenu;
-                  responseToUserText = {
-                    "messaging_product": "whatsapp",
-                    "recipient_type": "individual",
-                    "to": `${userPhoneNumber}`,
-                    "type": "interactive",
-                    "interactive": {
-                      "type": "list",
-                      "body": {
-                        "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
-                      },
-                      "action": {
-                        "button": "Choose a category",
-                        "sections": [
-                          {
+                // case "10":
+                //   {
+                //     responseMenu = automotiveSubCategoryListMenu;
+                //     responseToUserText = {
+                //       "messaging_product": "whatsapp",
+                //       "recipient_type": "individual",
+                //       "to": `${userPhoneNumber}`,
+                //       "type": "interactive",
+                //       "interactive": {
+                //         "type": "list",
+                //         "body": {
+                //           "text": "*Product Sub-Category*\n\nUse the list below to choose the sub-category your product belongs to.",
+                //         },
+                //         "action": {
+                //           "button": "Choose a category",
+                //           "sections": [
+                //             {
 
-                            "rows": responseMenu,
-                          },
-                        ],
-                      },
-                    },
-                  };
-                }
-                break;
+              //               "rows": responseMenu,
+              //             },
+              //           ],
+              //         },
+              //       },
+              //     };
+              //   }
+              //   break;
               default:
               {
                 responseMenu = categoryListMenu;
