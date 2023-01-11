@@ -10,9 +10,12 @@ const axios = require("axios");
 const phone = require("awesome-phonenumber");
 const moment = require("moment");
 const extractUrls = require("extract-urls");
+const algoliasearch = require("algoliasearch");
 const {parser} = require("html-metadata-parser");
 
 const serviceAccount = require("./serviceAccountKey.json");
+const client = algoliasearch(process.env.ALGOLIA_SEARCH_APP_ID, process.env.ALGOLIA_SEARCH_ADMIN_API_KEY);
+const index = client.initIndex("tapfuma_product_keywords");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -40,7 +43,7 @@ const mapKIDs = {};
 const mapLIDs = {};
 const mapMIDs = {};
 const map00IDs = {"00": "00"};
-const supportedCountryCodes = {"GY": "GY", "PG": "PG", "SB": "SB", "VU": "VU", "FJ": "FJ", "AG": "AG", "DM": "DM", "LC": "LC", "VC": "VC", "GD": "GD", "BB": "BB", "TT": "TT", "LK": "LK", "IN": "IN", "BD": "BD", "PR": "PR", "BS": "BS", "JM": "JM", "BZ": "BZ", "HK": "HK", "SG": "SG", "SL": "SL", "MU": "MU", "PH": "PH", "CA": "CA", "ZA": "ZA", "LS": "LS", "SZ": "SZ", "ZW": "ZW", "BW": "BW", "ZM": "ZM", "NA": "NA", "MW": "MW", "TZ": "TZ", "KE": "KE", "BI": "BI", "RW": "RW", "UG": "UG", "US": "US", "GB": "GB", "AU": "AU", "NZ": "NZ", "IE": "IE", "NG": "NG", "LB": "LB", "AE": "AE", "QA": "QA"};
+const supportedCountryCodes = {"DE": "DE", "GY": "GY", "PG": "PG", "SB": "SB", "VU": "VU", "FJ": "FJ", "AG": "AG", "DM": "DM", "LC": "LC", "VC": "VC", "GD": "GD", "BB": "BB", "TT": "TT", "LK": "LK", "IN": "IN", "BD": "BD", "PR": "PR", "BS": "BS", "JM": "JM", "BZ": "BZ", "HK": "HK", "SG": "SG", "SL": "SL", "MU": "MU", "PH": "PH", "CA": "CA", "ZA": "ZA", "LS": "LS", "SZ": "SZ", "ZW": "ZW", "BW": "BW", "ZM": "ZM", "NA": "NA", "MW": "MW", "TZ": "TZ", "KE": "KE", "BI": "BI", "RW": "RW", "UG": "UG", "US": "US", "GB": "GB", "AU": "AU", "NZ": "NZ", "IE": "IE", "NG": "NG", "LB": "LB", "AE": "AE", "QA": "QA"};
 const supportedCurrencyCodes = {"GY": "gyd", "PG": "pgk", "SB": "sbd", "VU": "vuv", "FJ": "fjd", "AG": "xcd", "DM": "xcd", "LC": "xcd", "VC": "xcd", "GD": "xcd", "BB": "bbd", "TT": "ttd", "LK": "lkr", "IN": "inr", "BD": "bdt", "PR": "usd", "BS": "bsd", "JM": "jmd", "BZ": "bzd", "HK": "hkd", "SG": "sgd", "SL": "sll", "MU": "mur", "PH": "php", "CA": "cad", "ZA": "zar", "LS": "lsl", "SZ": "szl", "ZW": "usd", "BW": "bwp", "ZM": "zmw", "NA": "nad", "MW": "mwk", "TZ": "tzs", "KE": "kes", "BI": "bif", "RW": "rwf", "UG": "ugx", "US": "usd", "GB": "gbp", "AU": "aud", "NZ": "nzd", "IE": "eur", "NG": "ngn", "LB": "usd", "AE": "aed", "QA": "qar"};
 const initialBalanceTransaction = {"GY": -2098, "PG": -35, "SB": -82, "VU": -122, "FJ": -23, "AG": -27, "DM": -27, "LC": -27, "VC": -27, "GD": -27, "BB": -20, "TT": -68, "LK": -3686, "IN": -817, "BD": -1060, "PR": -10, "BS": -10, "JM": -1543, "BZ": -20, "HK": -78, "SG": -14, "SL": -176500, "MU": -438, "PH": -581, "CA": -14, "ZA": -178, "LS": -177, "SZ": -179, "ZW": -10, "BW": -133, "ZM": -164, "NA": -177, "MW": -10271, "TZ": -23300, "KE": -1218, "BI": -207, "RW": -107, "UG": -378, "US": -10, "GB": -8, "AU": -16, "NZ": -17, "IE": -10, "NG": -4403, "LB": -10, "AE": -37, "QA": -36};
 const categoryListReplyIDs = {"0": "0", "1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "10": "10"};
@@ -60,7 +63,7 @@ const consumerListMenu = [
   },
   {
     "id": "F0",
-    "title": "🎁 P2P Transfer",
+    "title": "🎁 Chakata",
   },
   {
     "id": "G0",
@@ -98,10 +101,10 @@ const merchantListMenu = [
   },
 ];
 const categoryListMenu = [
-  {
-    "id": "0",
-    "title": "🔥 Trending",
-  },
+  // {
+  //   "id": "0",
+  //   "title": "🔥 Trending",
+  // },
   {
     "id": "1",
     "title": "🥻 Clothing",
@@ -253,6 +256,18 @@ const homenGardenSubCategoryListMenu = [
   {
     "id": "6.6",
     "title": "Garden",
+  },
+  {
+    "id": "6.7",
+    "title": "Maid Service",
+  },
+  {
+    "id": "6.8",
+    "title": "Gardener Service",
+  },
+  {
+    "id": "6.9",
+    "title": "Handyman Service",
   },
 ];
 const toysnGamesSubCategoryListMenu = [
@@ -453,6 +468,7 @@ router.post("/", async (req, res) => {
   let officialUserName = "";
   let currentProductID = "";
   let currentBrowseProductsIndex = 0;
+  let currentProductCategoryID = "";
   let registeredMerchant = false;
   let registeredUser = false;
   let stripeCustomer = {};
@@ -540,6 +556,7 @@ router.post("/", async (req, res) => {
             chatFlowMapID = userData["chatFlowMapID"];
             previousChatFlowMapID = userData["previousChatFlowMapID"];
             // userEmail = userData["userEmail"];
+            currentProductCategoryID = userData["currentProductCategoryID"];
             lastMessageTimeStamp = userData["lastMessageTimeStamp"];
             currentProductID = userData["currentProductID"];
             officialUserName = userData["userName"];
@@ -623,7 +640,7 @@ router.post("/", async (req, res) => {
                 await mapC(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, countryCode);
                 break;
               case mapDIDs[chatFlowMapID] != undefined:
-                await mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex);
+                await mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, currentProductCategoryID);
                 break;
               case mapEIDs[chatFlowMapID] != undefined:
                 await mapE();
@@ -825,12 +842,13 @@ function sendFiveSearchResults(userPhoneNumber, countryCode) {
   });
 }
 
-function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex) {
+function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex, currentMessageTimeStamp) {
   return new Promise((resolve, reject) => {
     // send 5 browse results
 
     let responseToUserText = {};
-    let productImage = "";
+
+
     let productTitle = "";
     let productDescription = "";
     let productPrice = "";
@@ -838,7 +856,10 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
     let productID = "";
     let productReviews = "";
     let productStars = "";
+    let imageRefreshedOn = "0";
+    let responseButtons = [];
 
+    // First response while fetching products
     responseToUserText = {
       "messaging_product": "whatsapp",
       "to": userPhoneNumber,
@@ -860,13 +881,26 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
       });
     });
 
+    // Category 0 is the trending category
     if (productCategory == "0") {
-      const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("trending", "==", true).where("live", "==", true);
+      // sendFiveTrendingResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex);
+      return;
+    } else {
+      const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("productCategory", "==", productCategory).where("live", "==", true);
       query.get().then((snapShot) => {
         let counter = 0;
+        // const currentSnapshotIndex = 0;
         const size = snapShot.size;
 
+
+        // Size 0 is returned when snapshot is empty
         if (size <= 0) {
+          const docRef2 = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef2.set({
+            "chatFlowMapID": "D4",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
           responseToUserText = {
             "messaging_product": "whatsapp",
             "recipient_type": "individual",
@@ -882,14 +916,14 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
                   {
                     "type": "reply",
                     "reply": {
-                      "id": "VOC",
+                      "id": "CC",
                       "title": "Change categories",
                     },
                   },
                   {
                     "type": "reply",
                     "reply": {
-                      "id": "BAS",
+                      "id": "BS",
                       "title": "Become a seller",
                     },
                   },
@@ -912,10 +946,10 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
           });
         } else {
           snapShot.forEach((doc) => {
-          // doc.data() is never undefined for query doc snapshots
+            // doc.data() is never undefined for query doc snapshots
             const productData = doc.data();
             let shortenedProductLink = "";
-            productImage = productData["productImage"];
+            imageRefreshedOn = productData["imageRefreshedOn"];
             productTitle = productData["productTitle"];
             productDescription = productData["productDescription"];
             productPrice = productData["productPrice"];
@@ -924,8 +958,19 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
             productReviews = productData["productReviews"];
             productID = doc.id;
 
-            if ((counter >= currentBrowseProductsIndex) && (counter <= currentBrowseProductsIndex+10)) {
+            counter = counter+1;
+
+            if (counter <= (currentBrowseProductsIndex+5) && counter > currentBrowseProductsIndex) {
+              // const docRefErr = fs.collection("test").doc(doc.id);
+              // docRefErr.set({
+              //   "id": doc.id,
+              //   currentBrowseProductsIndex,
+              // });
+
               shortenedProductLink = productLink.split("https://")[1].trim();
+
+              // Saved for reviews
+              // \n\nView reviews👇🏾\nwww.reviws.web.app/${productID}
               responseToUserText = {
                 "messaging_product": "whatsapp",
                 "recipient_type": "individual",
@@ -933,14 +978,14 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
                 "type": "interactive",
                 "interactive": {
                   "type": "button",
-                  "header": {
-                    "type": "image",
-                    "image": {
-                      "link": productImage,
-                    },
-                  },
+                  // "header": {
+                  //   "type": "image",
+                  //   "image": {
+                  //     "link": productImage,
+                  //   },
+                  // },
                   "body": {
-                    "text": `*${productTitle}*\n${productDescription}\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}`,
+                    "text": `*${productTitle}*\n\n${productDescription}\n\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}`,
                   },
                   "footer": {
                     "text": `${productStars} ${productReviews}`,
@@ -950,13 +995,6 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
                       {
                         "type": "reply",
                         "reply": {
-                          "id": `VO::${productID}`,
-                          "title": "View Options",
-                        },
-                      },
-                      {
-                        "type": "reply",
-                        "reply": {
                           "id": `ATC::${productID}`,
                           "title": "Add to cart",
                         },
@@ -971,54 +1009,69 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
                 url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
                 data: responseToUserText,
                 headers: {"Content-Type": "application/json"},
-              }).then(()=>{
-                counter++;
+              }).catch(function(error) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                docRef.add({
+                  "mapJerror": "axios error for sendFiveBrowseResults1 is:" + error.message,
+                  "isResolved": false,
+                  "saver": `*${productTitle}*\n${productDescription}\n\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}${productID}${productReviews}${productStars}`,
+                });
+              });
 
-                if (counter == (currentBrowseProductsIndex+size) || counter == (currentBrowseProductsIndex+10)) {
-                  const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
-                  docRef.set({
-                    "currentBrowseProductsIndex": (currentBrowseProductsIndex+size),
-                  }, {merge: true});
+              if (counter == (currentBrowseProductsIndex+5) && (currentBrowseProductsIndex+1) < size ) {
+                const docRef2 = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef2.set({
+                  "chatFlowMapID": "D4",
+                  "currentProductCategoryID": productCategory,
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                }, {merge: true});
 
-                  responseToUserText = {
-                    "messaging_product": "whatsapp",
-                    "recipient_type": "individual",
-                    "to": userPhoneNumber,
-                    "type": "interactive",
-                    "interactive": {
-                      "type": "button",
-                      "body": {
-                        "text": "What would you like to do next?",
-                      },
-                      "action": {
-                        "buttons": [
-                          {
-                            "type": "reply",
-                            "reply": {
-                              "id": "1",
-                              "title": "Change category",
-                            },
-                          },
-                          {
-                            "type": "reply",
-                            "reply": {
-                              "id": "2",
-                              "title": "Checkout",
-                            },
-                          },
-                          {
-                            "type": "reply",
-                            "reply": {
-                              "id": "3",
-                              "title": "View More",
-                            },
-                          },
-                        ],
-                      },
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "currentBrowseProductsIndex": counter,
+                }, {merge: true});
+
+                responseButtons = [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "CC",
+                      "title": "Change category",
                     },
-                  };
+                  },
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "CO",
+                      "title": "Checkout",
+                    },
+                  },
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "VM",
+                      "title": "View More",
+                    },
+                  },
+                ];
 
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "recipient_type": "individual",
+                  "to": userPhoneNumber,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "button",
+                    "body": {
+                      "text": "What would you like to do next?",
+                    },
+                    "action": {
+                      "buttons": responseButtons,
+                    },
+                  },
+                };
 
+                setTimeout(function() {
                   axios({
                     method: "POST",
                     url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
@@ -1031,224 +1084,97 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
                       "isResolved": false,
                     });
                   });
-                }
-              }).catch(function(error) {
-                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
-                docRef.add({
-                  "mapJerror": "axios error for sendFiveBrowseResults1 is:" + error.message,
-                  "isResolved": false,
-                });
-              });
-
-              parser(productLink).catch((error)=>{
-                const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
-                productRef.set({
-                  "live": false,
+                }, 2500);
+              } else if (counter == currentBrowseProductsIndex+5 || counter == size) {
+                const docRef2 = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef2.set({
+                  "chatFlowMapID": "D4",
+                  "currentProductCategoryID": productCategory,
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
                 }, {merge: true});
-              });
-            } else {
-              const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test4");
-              docRef.set({
-                "error": "error",
-              }, {merge: true});
+
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "currentBrowseProductsIndex": counter,
+                }, {merge: true});
+
+                responseButtons = [
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "CC",
+                      "title": "Change category",
+                    },
+                  },
+                  {
+                    "type": "reply",
+                    "reply": {
+                      "id": "CO",
+                      "title": "Checkout",
+                    },
+                  },
+                ];
+
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "recipient_type": "individual",
+                  "to": userPhoneNumber,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "button",
+                    "body": {
+                      "text": "What would you like to do next?",
+                    },
+                    "action": {
+                      "buttons": responseButtons,
+                    },
+                  },
+                };
+
+                setTimeout(function() {
+                  axios({
+                    method: "POST",
+                    url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                    data: responseToUserText,
+                    headers: {"Content-Type": "application/json"},
+                  }).catch(function(error) {
+                    const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                    docRef.add({
+                      "mapJerror": "axios error for sendFiveBrowseResults2 is:" + error.message,
+                      "isResolved": false,
+                    });
+                  });
+                }, 2500);
+              }
             }
-          });
-        }
-      }).catch(function(error) {
-        const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test2");
-        docRef.set({
-          error,
-        }, {merge: true});
-      });
-    } else {
-      const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("productCategory", "==", productCategory).where("live", "==", true);
-      query.get().then((snapShot) => {
-        let counter = 0;
-        const size = snapShot.size;
 
-        if (size <= 0) {
-          responseToUserText = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": userPhoneNumber,
-            "type": "interactive",
-            "interactive": {
-              "type": "button",
-              "body": {
-                "text": "We couldn't find any products in this category.\n\nPlease try a different category or, you could make money by selling the product on Tapfuma💡.",
-              },
-              "action": {
-                "buttons": [
-                  {
-                    "type": "reply",
-                    "reply": {
-                      "id": "VOC",
-                      "title": "Change categories",
-                    },
-                  },
-                  {
-                    "type": "reply",
-                    "reply": {
-                      "id": "BAS",
-                      "title": "Become a seller",
-                    },
-                  },
-                ],
-              },
-            },
-          };
-
-          axios({
-            method: "POST",
-            url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-            data: responseToUserText,
-            headers: {"Content-Type": "application/json"},
-          }).catch(function(error) {
-            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
-            docRef.add({
-              "mapJerror": "axios error for sendFiveBrowseResults4 is:" + error.message,
-              "isResolved": false,
-            });
-          });
-        } else {
-          snapShot.forEach((doc) => {
-          // doc.data() is never undefined for query doc snapshots
-            const productData = doc.data();
-            let shortenedProductLink = "";
-            productImage = productData["productImage"];
-            productTitle = productData["productTitle"];
-            productDescription = productData["productDescription"];
-            productPrice = productData["productPrice"];
-            productLink = productData["productLink"];
-            productID = doc.id;
-
-            if ((counter >= currentBrowseProductsIndex) && (counter <= currentBrowseProductsIndex+10)) {
-              shortenedProductLink = productLink.split("https://")[1].trim();
-              responseToUserText = {
-                "messaging_product": "whatsapp",
-                "recipient_type": "individual",
-                "to": userPhoneNumber,
-                "type": "interactive",
-                "interactive": {
-                  "type": "button",
-                  "header": {
-                    "type": "image",
-                    "image": {
-                      "link": productImage,
-                    },
-                  },
-                  "body": {
-                    "text": `*${productTitle}*\n${productDescription}\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}`,
-                  },
-                  "footer": {
-                    "text": "⭐️⭐️⭐️⭐️⭐️ 108",
-                  },
-                  "action": {
-                    "buttons": [
-                      {
-                        "type": "reply",
-                        "reply": {
-                          "id": `VO::${productID}`,
-                          "title": "View Options",
-                        },
-                      },
-                      {
-                        "type": "reply",
-                        "reply": {
-                          "id": `ATC::${productID}`,
-                          "title": "Add to cart",
-                        },
-                      },
-                    ],
-                  },
-                },
-              };
-
-              axios({
-                method: "POST",
-                url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-                data: responseToUserText,
-                headers: {"Content-Type": "application/json"},
-              }).then(()=>{
-                counter++;
-
-                if (counter == (currentBrowseProductsIndex+size) || counter == (currentBrowseProductsIndex+10)) {
-                  const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
-                  docRef.set({
-                    "currentBrowseProductsIndex": (currentBrowseProductsIndex+size),
+            if ((parseInt(currentMessageTimeStamp) - parseInt(imageRefreshedOn)) > 86400 || imageRefreshedOn == null) {
+              parser(productLink).then((result)=>{
+                if (result.og["description"] !== undefined) {
+                  const fixedDescriptionArray = result.og["description"].split("·");
+                  if (fixedDescriptionArray[1] !== undefined) {
+                    const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+                    productRef.set({
+                      "productImage": result.og["image"],
+                    }, {merge: true});
+                  } else {
+                    const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+                    productRef.set({
+                      "live": false,
+                    }, {merge: true});
+                  }
+                } else {
+                  const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+                  productRef.set({
+                    "live": false,
                   }, {merge: true});
-
-                  responseToUserText = {
-                    "messaging_product": "whatsapp",
-                    "recipient_type": "individual",
-                    "to": userPhoneNumber,
-                    "type": "interactive",
-                    "interactive": {
-                      "type": "button",
-                      "body": {
-                        "text": "What would you like to do next?",
-                      },
-                      "action": {
-                        "buttons": [
-                          {
-                            "type": "reply",
-                            "reply": {
-                              "id": "1",
-                              "title": "Change category",
-                            },
-                          },
-                          {
-                            "type": "reply",
-                            "reply": {
-                              "id": "2",
-                              "title": "Checkout",
-                            },
-                          },
-                          {
-                            "type": "reply",
-                            "reply": {
-                              "id": "3",
-                              "title": "View More",
-                            },
-                          },
-                        ],
-                      },
-                    },
-                  };
-
-
-                  axios({
-                    method: "POST",
-                    url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-                    data: responseToUserText,
-                    headers: {"Content-Type": "application/json"},
-                  }).catch(function(error) {
-                    const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
-                    docRef.add({
-                      "mapJerror": "axios error for sendFiveBrowseResults2 is:" + error.message,
-                      "isResolved": false,
-                    });
-                  });
                 }
-              }).catch(function(error) {
-                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
-                docRef.add({
-                  "mapJerror": "axios error for sendFiveBrowseResults1 is:" + error.message,
-                  "isResolved": false,
-                });
-              });
-
-              parser(productLink).catch((error)=>{
+              }).catch((error)=>{
                 const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
                 productRef.set({
                   "live": false,
                 }, {merge: true});
               });
-            } else {
-              const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test4");
-              docRef.set({
-                "error": "error",
-              }, {merge: true});
             }
           });
         }
@@ -1265,6 +1191,265 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
   });
 }
 
+// function sendFiveBrowseResultsExtension(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex) {
+//   return new Promise((resolve, reject) => {
+
+
+//     return resolve();
+//   });
+// }
+
+// function sendFiveTrendingResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex) {
+//   return new Promise((resolve, reject) => {
+//     let responseToUserText = {};
+//     let productImage = "";
+//     let productTitle = "";
+//     let productDescription = "";
+//     let productPrice = "";
+//     let productLink = "";
+//     let productID = "";
+//     let productReviews = "";
+//     let productStars = "";
+//     let responseButtons = [];
+
+//     const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("trending", "==", true).where("live", "==", true);
+//     query.get().then((snapShot) => {
+//       let counter = 0;
+//       const size = snapShot.size;
+
+//       if (size <= 0) {
+//         responseToUserText = {
+//           "messaging_product": "whatsapp",
+//           "recipient_type": "individual",
+//           "to": userPhoneNumber,
+//           "type": "interactive",
+//           "interactive": {
+//             "type": "button",
+//             "body": {
+//               "text": "We couldn't find any products in this category.\n\nPlease try a different category or, you could make money by selling the product on Tapfuma💡.",
+//             },
+//             "action": {
+//               "buttons": [
+//                 {
+//                   "type": "reply",
+//                   "reply": {
+//                     "id": "VOC",
+//                     "title": "Change categories",
+//                   },
+//                 },
+//                 {
+//                   "type": "reply",
+//                   "reply": {
+//                     "id": "BAS",
+//                     "title": "Become a seller",
+//                   },
+//                 },
+//               ],
+//             },
+//           },
+//         };
+
+//         axios({
+//           method: "POST",
+//           url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+//           data: responseToUserText,
+//           headers: {"Content-Type": "application/json"},
+//         }).catch(function(error) {
+//           const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+//           docRef.add({
+//             "mapJerror": "axios error for sendFiveBrowseResults4 is:" + error.message,
+//             "isResolved": false,
+//           });
+//         });
+//       } else {
+//         snapShot.forEach((doc) => {
+//           // doc.data() is never undefined for query doc snapshots
+//           const productData = doc.data();
+//           let shortenedProductLink = "";
+//           productImage = productData["productImage"];
+//           productTitle = productData["productTitle"];
+//           productDescription = productData["productDescription"];
+//           productPrice = productData["productPrice"];
+//           productLink = productData["productLink"];
+//           productStars = productData["productStars"];
+//           productReviews = productData["productReviews"];
+//           productID = doc.id;
+
+//           if ((counter >= currentBrowseProductsIndex) && (counter <= currentBrowseProductsIndex+5)) {
+//             shortenedProductLink = productLink.split("https://")[1].trim();
+//             responseToUserText = {
+//               "messaging_product": "whatsapp",
+//               "recipient_type": "individual",
+//               "to": userPhoneNumber,
+//               "type": "interactive",
+//               "interactive": {
+//                 "type": "button",
+//                 "header": {
+//                   "type": "image",
+//                   "image": {
+//                     "link": productImage,
+//                   },
+//                 },
+//                 "body": {
+//                   "text": `*${productTitle}*\n\n${productDescription}\n\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}`,
+//                 },
+//                 "footer": {
+//                   "text": `${productStars} ${productReviews}`,
+//                 },
+//                 "action": {
+//                   "buttons": [
+//                     {
+//                       "type": "reply",
+//                       "reply": {
+//                         "id": `ATC::${productID}`,
+//                         "title": "Add to cart",
+//                       },
+//                     },
+//                   ],
+//                 },
+//               },
+//             };
+
+//             axios({
+//               method: "POST",
+//               url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+//               data: responseToUserText,
+//               headers: {"Content-Type": "application/json"},
+//             }).then(()=>{
+//               counter++;
+
+//               if (counter == (currentBrowseProductsIndex+size) || counter == (currentBrowseProductsIndex+5)) {
+//                 const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+//                 docRef.set({
+//                   "currentBrowseProductsIndex": (currentBrowseProductsIndex+5),
+//                 }, {merge: true});
+
+//                 if (currentBrowseProductsIndex+5 >= size) {
+//                   responseButtons = [
+//                     {
+//                       "type": "reply",
+//                       "reply": {
+//                         "id": "CC",
+//                         "title": "Change category",
+//                       },
+//                     },
+//                     {
+//                       "type": "reply",
+//                       "reply": {
+//                         "id": "CO",
+//                         "title": "Checkout",
+//                       },
+//                     },
+//                   ];
+//                 } else {
+//                   responseButtons = [
+//                     {
+//                       "type": "reply",
+//                       "reply": {
+//                         "id": "CC",
+//                         "title": "Change category",
+//                       },
+//                     },
+//                     {
+//                       "type": "reply",
+//                       "reply": {
+//                         "id": "CO",
+//                         "title": "Checkout",
+//                       },
+//                     },
+//                     {
+//                       "type": "reply",
+//                       "reply": {
+//                         "id": "VM",
+//                         "title": "View More",
+//                       },
+//                     },
+//                   ];
+//                 }
+
+//                 responseToUserText = {
+//                   "messaging_product": "whatsapp",
+//                   "recipient_type": "individual",
+//                   "to": userPhoneNumber,
+//                   "type": "interactive",
+//                   "interactive": {
+//                     "type": "button",
+//                     "body": {
+//                       "text": "What would you like to do next?",
+//                     },
+//                     "action": {
+//                       "buttons": responseButtons,
+//                     },
+//                   },
+//                 };
+
+
+//                 axios({
+//                   method: "POST",
+//                   url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+//                   data: responseToUserText,
+//                   headers: {"Content-Type": "application/json"},
+//                 }).catch(function(error) {
+//                   const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+//                   docRef.add({
+//                     "mapJerror": "axios error for sendFiveBrowseResults2 is:" + error.message,
+//                     "isResolved": false,
+//                   });
+//                 });
+//               }
+//             }).catch(function(error) {
+//               const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+//               docRef.add({
+//                 "mapJerror": "axios error for sendFiveBrowseResults1 is:" + error.message,
+//                 "isResolved": false,
+//               });
+//             });
+
+//             parser(productLink).then((result)=>{
+//               if (result.og["description"] !== undefined) {
+//                 const fixedDescriptionArray = result.og["description"].split("·");
+//                 if (fixedDescriptionArray[1] !== undefined) {
+//                   const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+// productRef.set({
+//   "productImage": result.og["image"],
+// }, {merge: true});
+//                 } else {
+//                   const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+//                   productRef.set({
+//                     "live": false,
+//                   }, {merge: true});
+//                 }
+//               } else {
+//                 const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+//                 productRef.set({
+//                   "live": false,
+//                 }, {merge: true});
+//               }
+//             }).catch((error)=>{
+//               const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(`${doc.id}`);
+//               productRef.set({
+//                 "live": false,
+//               }, {merge: true});
+//             });
+//           } else {
+//             const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test4");
+//             docRef.set({
+//               "error": "error",
+//             }, {merge: true});
+//           }
+//         });
+//       }
+//     }).catch(function(error) {
+//       const docRef = fs.collection("sendFiveBrowseResultsTest").doc("test2");
+//       docRef.set({
+//         error,
+//       }, {merge: true});
+//     });
+
+//     return resolve();
+//   });
+// }
+
 function j2Extension(countryCode, productLink, userName, userPhoneNumber, currentMessageTimeStamp) {
   return new Promise((resolve, reject) => {
     let responseToUserText = {};
@@ -1272,57 +1457,147 @@ function j2Extension(countryCode, productLink, userName, userPhoneNumber, curren
       if (result.og["description"] !== undefined) {
         const fixedDescriptionArray = result.og["description"].split("·");
         if (fixedDescriptionArray[1] !== undefined) {
-          const fixedTitleArray = result.og["title"].split(` from ${userName} `);
-          const productTitle = fixedTitleArray[0].trim();
-          const productDescription = fixedDescriptionArray[0].trim();
-          const productPrice = fixedDescriptionArray[1].trim();
+          const query = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").where("productLink", "==", productLink);
+          query.get().then((snapShot) => {
+            if (snapShot.empty) {
+              const fixedTitleArray = result.og["title"].split(` from ${userName} `);
+              const productTitle = fixedTitleArray[0].trim();
+              const productDescription = fixedDescriptionArray[0].trim();
+              const productPrice = fixedDescriptionArray[1].trim();
 
 
-          const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts");
-          productRef.add({
-            userPhoneNumber,
-            "prohibited": false,
-            "live": true,
-            "outOfStock": false,
-            "createdON": currentMessageTimeStamp,
-            "productTitle": productTitle,
-            "productDescription": productDescription,
-            "productPrice": productPrice,
-            "productImage": result.og["image"],
-            productLink,
-          }).then((docRefID) => {
+              const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts");
+              productRef.add({
+                userPhoneNumber,
+                "prohibited": false,
+                "live": true,
+                "outOfStock": false,
+                "createdON": currentMessageTimeStamp,
+                "productTitle": productTitle,
+                "productDescription": productDescription,
+                "productPrice": productPrice,
+                productLink,
+              }).then((docRefID) => {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "currentProductID": docRefID.id,
+                  "chatFlowMapID": "J3",
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                  "userProducts": FieldValue.arrayUnion(`${docRefID.id}`),
+                }, {merge: true});
+
+                const responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "button",
+                    "body": {
+                      "text": "*Step 2 of 5 - Product Sizes*\n\nDo you offer different sizes for this product?",
+                    },
+                    "action": {
+                      "buttons": [
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "J3.YES",
+                            "title": "Yes",
+                          },
+                        },
+                        {
+                          "type": "reply",
+                          "reply": {
+                            "id": "J3.NO",
+                            "title": "No",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                };
+
+                axios({
+                  method: "POST",
+                  url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                  data: responseToUserText,
+                  headers: {"Content-Type": "application/json"},
+                }).catch(function(error) {
+                  const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                  docRef.add({
+                    "mapJerror": "axios error for map J2X is:" + error.message,
+                    "isResolved": false,
+                  });
+                });
+              });
+            } else {
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": "00",
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+              }, {merge: true});
+
+              const responseMenu = merchantListMenu;
+
+              const responseToUserText = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": `${userPhoneNumber}`,
+                "type": "interactive",
+                "interactive": {
+                  "type": "list",
+                  "body": {
+                    "text": "That product already exists in your catalog. To edit this product, use the \"View products\" option.\n\nTo continue, please choose an option from the *Seller Services* menu below or respond 'X' to return home.",
+                  },
+                  "action": {
+                    "button": "Select an option",
+                    "sections": [
+                      {
+
+                        "rows": responseMenu,
+                      },
+                    ],
+                  },
+                },
+              };
+
+              axios({
+                method: "POST",
+                url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                data: responseToUserText,
+                headers: {"Content-Type": "application/json"},
+              }).catch(function(error) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                docRef.add({
+                  "mapJerror": "axios error for map J2X is:" + error.message,
+                  "isResolved": false,
+                });
+              });
+            }
+          }).catch((error) => {
             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
             docRef.set({
-              "currentProductID": docRefID.id,
-              "chatFlowMapID": "J3",
+              "chatFlowMapID": "00",
               "lastMessageTimeStamp": currentMessageTimeStamp,
-              "userProducts": FieldValue.arrayUnion(`${docRefID.id}`),
             }, {merge: true});
+
+            const responseMenu = merchantListMenu;
 
             const responseToUserText = {
               "messaging_product": "whatsapp",
-              "to": userPhoneNumber,
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
               "type": "interactive",
               "interactive": {
-                "type": "button",
+                "type": "list",
                 "body": {
-                  "text": "*Step 2 of 5 - Product Sizes*\n\nDo you offer different sizes for this product?",
+                  "text": "We encountered an error while listing your product. Please try again or contact support if this problem continues.\n\nTo continue, please choose an option from the *Seller Services* menu below or respond 'X' to return home.",
                 },
                 "action": {
-                  "buttons": [
+                  "button": "Select an option",
+                  "sections": [
                     {
-                      "type": "reply",
-                      "reply": {
-                        "id": "J3.YES",
-                        "title": "Yes",
-                      },
-                    },
-                    {
-                      "type": "reply",
-                      "reply": {
-                        "id": "J3.NO",
-                        "title": "No",
-                      },
+
+                      "rows": responseMenu,
                     },
                   ],
                 },
@@ -1419,6 +1694,7 @@ function j2Extension(countryCode, productLink, userName, userPhoneNumber, curren
     return resolve();
   });
 }
+
 
 // Map functions begin here
 
@@ -3641,8 +3917,9 @@ function mapC() {
   });
 }
 
-function mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex) {
+function mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, currentProductCategoryID) {
   let responseToUserText = {};
+  let axiosTrigger = true;
   return new Promise((resolve, reject) => {
     if (listReplyID && categoryListReplyIDs[listReplyID] != undefined) {
       switch (listReplyID) {
@@ -3808,7 +4085,8 @@ function mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageTy
           if (messageType == "listReply") {
             if ((listReplyID.split(".")[0] !== undefined) && (listReplyID.split(".")[0].length <= 1) && (listReplyID.split(".")[1] !== undefined) && (listReplyID.split(".")[1].length <= 1)) {
               const productCategory = listReplyID;
-              sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex);
+              sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex, currentMessageTimeStamp);
+              axiosTrigger = false;
             } else {
               responseMenu = categoryListMenu;
 
@@ -3873,9 +4151,60 @@ function mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageTy
           }
         }
         break;
-        // case "D4":
-        //   {}
-        //   break;
+      case "D4":
+        {
+          if (messageType == "buttonReply" && buttonReplyID == "CO") {
+            // Check out = CO
+
+          } else if (messageType == "buttonReply" && buttonReplyID == "VM") {
+            // View More = VM
+            const productCategory = currentProductCategoryID;
+            sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, currentBrowseProductsIndex, currentMessageTimeStamp);
+          } else if (messageType == "buttonReply" && buttonReplyID == "CC") {
+            // Change category = CC
+            responseMenu = categoryListMenu;
+
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "D2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "recipient_type": "individual",
+              "to": `${userPhoneNumber}`,
+              "type": "interactive",
+              "interactive": {
+                "type": "list",
+                "body": {
+                  "text": "Please pick a category from the menu below.",
+                },
+                "action": {
+                  "button": "Select an option",
+                  "sections": [
+                    {
+
+                      "rows": responseMenu,
+                    },
+                  ],
+                },
+              },
+            };
+          } else if (messageType == "buttonReply" && buttonReplyID.includes("ATC::")) {
+            // Add to cart = ATC::${productID}
+
+          } else if (messageType == "buttonReply" && buttonReplyID.includes("BS")) {
+            // Become a seller = BS
+
+
+          } else {
+            // Non-button response
+
+
+          }
+        }
+        break;
         // case "D5":
         //   {}
         //   break;
@@ -3916,18 +4245,20 @@ function mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageTy
       }
     }
 
-    axios({
-      method: "POST",
-      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-      data: responseToUserText,
-      headers: {"Content-Type": "application/json"},
-    }).catch(function(error) {
-      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
-      docRef.add({
-        "mapDerror": "axios error for map D is:" + error.message,
-        "isResolved": false,
+    if (axiosTrigger) {
+      axios({
+        method: "POST",
+        url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+        data: responseToUserText,
+        headers: {"Content-Type": "application/json"},
+      }).catch(function(error) {
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+        docRef.add({
+          "mapDerror": "axios error for map D is:" + error.message,
+          "isResolved": false,
+        });
       });
-    });
+    }
 
     resolve();
   });
@@ -4311,6 +4642,12 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
       case "J6":
         {
           if (messageType == "buttonReply" && buttonReplyID == "J6.YES") {
+            const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+            productRef.set({
+              "productHasColors": true,
+              "productScore": 100,
+            }, {merge: true});
+
             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
             docRef.set({
               "chatFlowMapID": "J7",
@@ -4325,6 +4662,12 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
               },
             };
           } else if (messageType == "buttonReply" && buttonReplyID == "J6.NO") {
+            const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+            productRef.set({
+              "productHasColors": false,
+              "productScore": 100,
+            }, {merge: true});
+
             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
             docRef.set({
               "chatFlowMapID": "J9",
@@ -4349,10 +4692,6 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
               const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
               productRef.set({
                 "productColors": productColorArray,
-                "trending": false,
-                "productReviews": 0,
-                "numberOfPurchases": 0,
-                "productStars": "⭐️⭐️⭐️⭐️⭐️",
               }, {merge: true});
 
               const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
@@ -4920,7 +5259,79 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
             const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
             productRef.set({
               "productCategory": listReplyID,
-            }, {merge: true});
+              "trending": false,
+              "productReviews": 1,
+              "numberOfPurchases": 1,
+              "productStars": "⭐️⭐️⭐️⭐️⭐️",
+            }, {merge: true}).then(()=>{
+              if (userPhoneNumber == "16475577272") {
+                productRef.get().then((doc) => {
+                  const productDescriprion = doc.data()["productDescription"];
+                  const productTitle = doc.data()["productTitle"];
+                  const productKeywords = doc.data()["productKeys"];
+                  const productScore = doc.data()["productScore"];
+                  const productHasColors = doc.data()["productHasColors"];
+                  const objectID = doc.id;
+                  let data = {};
+
+                  if (productHasColors) {
+                    const productColors = doc.data()["productColors"];
+                    data = {productDescriprion, productTitle, productKeywords, productColors, productScore};
+                  } else {
+                    data = {productDescriprion, productTitle, productKeywords, productScore};
+                  }
+
+                  index
+                      .saveObjects([{objectID, data}]).then((result) =>{
+                        const docRef = fs.collection("algoliaResult");
+                        docRef.add({
+                          "mapJerror": "algolia result is:" + result,
+                        });
+                      }).catch((err) => {
+                        console.log(err);
+                      });
+                }).catch((err) => {
+                  const docRef = fs.collection("algoliaErrors");
+                  docRef.add({
+                    "mapJerror": "algolia error is:" + err.message,
+                  });
+                });
+
+                superStoreFunction(countryCode, currentProductID);
+              } else {
+                productRef.get().then((doc) => {
+                  const productDescriprion = doc.data()["productDescription"];
+                  const productTitle = doc.data()["productTitle"];
+                  const productKeywords = doc.data()["productKeys"];
+                  const productScore = doc.data()["productScore"];
+                  const productHasColors = doc.data()["productHasColors"];
+                  const objectID = doc.id;
+                  let data = {};
+
+                  if (productHasColors) {
+                    const productColors = doc.data()["productColors"];
+                    data = {productDescriprion, productTitle, productKeywords, productColors, productScore};
+                  } else {
+                    data = {productDescriprion, productTitle, productKeywords, productScore};
+                  }
+
+                  index
+                      .saveObjects([{objectID, data}]).then((result) =>{
+                        const docRef = fs.collection("algoliaResult");
+                        docRef.add({
+                          "mapJerror": "algolia result is:" + result,
+                        });
+                      }).catch((err) => {
+                        console.log(err);
+                      });
+                }).catch((err) => {
+                  const docRef = fs.collection("algoliaErrors");
+                  docRef.add({
+                    "mapJerror": "algolia error is:" + err.message,
+                  });
+                });
+              }
+            });
 
             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
             docRef.set({
@@ -4950,7 +5361,7 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
                       "type": "reply",
                       "reply": {
                         "id": "J13.VM",
-                        "title": "View Products",
+                        "title": "View My Products",
                       },
                     },
                   ],
@@ -5578,6 +5989,245 @@ function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStam
     });
 
     resolve();
+  });
+}
+
+
+// SUPERSTORE FUNCTIONS
+function superStoreFunction(countryCode, currentProductID) {
+  return new Promise((resolve, reject) => {
+    let priceInUSD = 0.0;
+    const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+    productRef.get().then((doc) => {
+      if (doc.exists) {
+        const price = doc.data()["productPrice"].split("$")[1];
+        const checker = price.includes(",");
+        if (checker) {
+          priceInUSD = parseFloat(`${price.split(",")[0]}${price.split(",")[1]}`);
+        } else {
+          priceInUSD = parseFloat(price);
+        }
+
+
+        ssExtensionZimbabwe(priceInUSD, currentProductID, doc);
+
+        ssExtensionZambia(priceInUSD, currentProductID, doc);
+
+        ssExtensionSouthAfrica(priceInUSD, currentProductID, doc);
+
+        ssExtensionLesotho(priceInUSD, currentProductID, doc);
+
+        ssExtensionBotswana(priceInUSD, currentProductID, doc);
+
+        ssExtensionNamibia(priceInUSD, currentProductID, doc);
+
+        ssExtensionMalawi(priceInUSD, currentProductID, doc);
+
+        ssExtensionTanzania(priceInUSD, currentProductID, doc);
+
+        ssExtensionKanye(priceInUSD, currentProductID, doc);
+
+        ssExtensionBurundi(priceInUSD, currentProductID, doc);
+
+        ssExtensionRwanda(priceInUSD, currentProductID, doc);
+
+        ssExtensionUganda(priceInUSD, currentProductID, doc);
+      }
+    });
+
+    return resolve();
+  });
+}
+
+function ssExtensionZimbabwe(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const zimbabweRef = fs.collection("ZW").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawUSDollar = priceInUSD;
+    const zimbabweFormatter = new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency: "USD",
+    });
+    const priceInUSDollar = zimbabweFormatter.format(rawUSDollar);
+    zimbabweRef.set(doc.data()).then(() =>{
+      zimbabweRef.set({"productPrice": `${priceInUSDollar}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionZambia(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const zambiaRef = fs.collection("ZM").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawZMWKwacha = priceInUSD*20;
+    const zambiaFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "ZMW",
+    });
+    const priceInZMWKwacha = zambiaFormatter.format(rawZMWKwacha);
+    zambiaRef.set(doc.data()).then(() =>{
+      zambiaRef.set({"productPrice": `${priceInZMWKwacha}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionSouthAfrica(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const southAfricaRef = fs.collection("ZA").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawRand = priceInUSD*19;
+    const southAfricaFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "ZAR",
+    });
+    const priceInRand = southAfricaFormatter.format(rawRand);
+    southAfricaRef.set(doc.data()).then(() =>{
+      southAfricaRef.set({"productPrice": `${priceInRand}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionLesotho(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const lesothoRef = fs.collection("LS").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawLoti = priceInUSD*19;
+    const lesothoFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "LSL",
+    });
+    const priceInLoti = lesothoFormatter.format(rawLoti);
+    lesothoRef.set(doc.data()).then(() =>{
+      lesothoRef.set({"productPrice": `${priceInLoti}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionBotswana(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const botswanaRef = fs.collection("BW").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawPula = priceInUSD*15;
+    const botswanaFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "BWP",
+    });
+    const priceInPula = botswanaFormatter.format(rawPula);
+    botswanaRef.set(doc.data()).then(() =>{
+      botswanaRef.set({"productPrice": `${priceInPula}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionNamibia(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const namibiaRef = fs.collection("NA").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawNADollar = priceInUSD*19;
+    const namibiaFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "NAD",
+    });
+    const priceInNADollar = namibiaFormatter.format(rawNADollar);
+    namibiaRef.set(doc.data()).then(() =>{
+      namibiaRef.set({"productPrice": `${priceInNADollar}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionMalawi(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const malawiRef = fs.collection("MW").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawMWKwacha = priceInUSD*1100;
+    const malawiFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "MWK",
+    });
+    const priceInMWKwacha = malawiFormatter.format(rawMWKwacha);
+    malawiRef.set(doc.data()).then(() =>{
+      malawiRef.set({"productPrice": `${priceInMWKwacha}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionTanzania(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const tanzaniaRef = fs.collection("TZ").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawTZShilling = priceInUSD*2400;
+    const tanzaniaFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "TZS",
+    });
+    const priceInTZShilling = tanzaniaFormatter.format(rawTZShilling);
+    tanzaniaRef.set(doc.data()).then(() =>{
+      tanzaniaRef.set({"productPrice": `${priceInTZShilling}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionKanye(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const kenyaRef = fs.collection("KE").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawKEShilling = priceInUSD*140;
+    const kenyaFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "KES",
+    });
+    const priceInKEShilling = kenyaFormatter.format(rawKEShilling);
+    kenyaRef.set(doc.data()).then(() =>{
+      kenyaRef.set({"productPrice": `${priceInKEShilling}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionBurundi(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const burundiRef = fs.collection("BI").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawBIFranc = priceInUSD*2100;
+    const burundiFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "BIF",
+    });
+    const priceInBIFranc = burundiFormatter.format(rawBIFranc);
+    burundiRef.set(doc.data()).then(() =>{
+      burundiRef.set({"productPrice": `${priceInBIFranc}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionRwanda(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const rwandaRef = fs.collection("RW").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawRWFranc = priceInUSD*1100;
+    const rwandaFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "RWF",
+    });
+    const priceInRWFranc = rwandaFormatter.format(rawRWFranc);
+    rwandaRef.set(doc.data()).then(() =>{
+      rwandaRef.set({"productPrice": `${priceInRWFranc}`}, {merge: true});
+    });
+    return resolve();
+  });
+}
+
+function ssExtensionUganda(priceInUSD, currentProductID, doc) {
+  return new Promise((resolve, reject) => {
+    const ugandaRef = fs.collection("UG").doc("Products").collection("allProducts").doc(currentProductID);
+    const rawUGXShilling = priceInUSD*4000;
+    const ugandaFormatter = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "UGX",
+    });
+    const priceInUGXShilling = ugandaFormatter.format(rawUGXShilling);
+    ugandaRef.set(doc.data()).then(() =>{
+      ugandaRef.set({"productPrice": `${priceInUGXShilling}`}, {merge: true});
+    });
+    return resolve();
   });
 }
 
