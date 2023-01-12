@@ -637,7 +637,7 @@ router.post("/", async (req, res) => {
                 await mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, countryCode, previousChatFlowMapID, userTextMessage, addressLatitude, addressLongitude, addressFull, addressName);
                 break;
               case mapCIDs[chatFlowMapID] != undefined:
-                await mapC(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, countryCode);
+                await mapC(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, previousChatFlowMapID, userTextMessage);
                 break;
               case mapDIDs[chatFlowMapID] != undefined:
                 await mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, currentProductCategoryID);
@@ -818,27 +818,59 @@ function getUserProfile(userPhoneNumber, countryCode) {
   });
 }
 
-function sendFiveSearchResults(userPhoneNumber, countryCode) {
+function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, currentBrowseProductsIndex, currentMessageTimeStamp) {
   return new Promise((resolve, reject) => {
-    // check if user is new or exisits
-
-    const userDataRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
-
-    const userData = userDataRef.get().then((doc) => {
-      if (doc.exists) {
-        const udt = {"userDataObj": doc.data(), "exists": true};
-        return udt;
-      } else {
-        const udt = {"exists": false};
-        return udt;
-      }
-    }).catch((error) => {
-      const udt = {"exists": false};
-      return udt;
-    });
+    // let responseToUserText = {};
 
 
-    return resolve(userData);
+    let productTitle = "";
+    let productDescription = "";
+    // let productPrice = "";
+    let productLink = "";
+    let productID = "";
+    let productReviews = "";
+    // let productStars = "";
+    // let imageRefreshedOn = "0";
+    let productScore = 0;
+    // let responseButtons = [];
+
+    index
+        .search(userTextMessage)
+        .then(({hits}) => {
+          const resultCount = hits.length;
+          if (resultCount>0) {
+            hits.forEach((product) => {
+              productTitle = product.data["productTitle"];
+              productDescription = product.data["productDescriprion"];
+              productScore = product.data["productScore"];
+              productReviews = product.data["productReviews"];
+              productLink = product.data["productLink"];
+              productID = product["objectID"];
+
+              const docRef = fs.collection("algoliaTest3").doc(`${userTextMessage}`);
+              docRef.set({
+                productID,
+                productLink,
+                productReviews,
+                productScore,
+                productDescription,
+                productTitle,
+              });
+            });
+          }
+          // else {
+
+          // }
+        })
+        .catch((err) => {
+          const docRef = fs.collection("algoliaTest").doc("error");
+          docRef.set({
+            err,
+          });
+        });
+
+
+    return resolve();
   });
 }
 
@@ -857,6 +889,7 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
     let productReviews = "";
     let productStars = "";
     let imageRefreshedOn = "0";
+    let productScore = 0;
     let responseButtons = [];
 
     // First response while fetching products
@@ -954,11 +987,29 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
             productDescription = productData["productDescription"];
             productPrice = productData["productPrice"];
             productLink = productData["productLink"];
-            productStars = productData["productStars"];
+            productScore = productData["productScore"];
             productReviews = productData["productReviews"];
             productID = doc.id;
 
             counter = counter+1;
+
+            switch (true) {
+              case productScore > 0 && productScore <= 20:
+                productStars = "⭐️☆☆☆☆";
+                break;
+              case productScore > 20 && productScore <= 40:
+                productStars = "⭐️⭐️☆☆☆";
+                break;
+              case productScore > 40 && productScore <= 60:
+                productStars = "⭐️⭐️⭐️☆☆";
+                break;
+              case productScore > 60 && productScore <= 80:
+                productStars = "⭐️⭐️⭐️⭐️☆";
+                break;
+              case productScore > 80 && productScore <= 100:
+                productStars = "⭐️⭐️⭐️⭐️⭐️";
+                break;
+            }
 
             if (counter <= (currentBrowseProductsIndex+5) && counter > currentBrowseProductsIndex) {
               // const docRefErr = fs.collection("test").doc(doc.id);
@@ -1896,6 +1947,13 @@ function mapA(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
                   {
                     "type": "reply",
                     "reply": {
+                      "id": "A6.ST",
+                      "title": "Search Tapfuma",
+                    },
+                  },
+                  {
+                    "type": "reply",
+                    "reply": {
                       "id": "A6.BP",
                       "title": "Browse Products",
                     },
@@ -1967,6 +2025,20 @@ function mapA(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
                 },
               },
             };
+          } else if (messageType == "buttonReply" && buttonReplyID == "A6.ST") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "C2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "What product are you looking for today?",
+              },
+            };
           } else {
             responseToUserText = {
               "messaging_product": "whatsapp",
@@ -1984,6 +2056,13 @@ function mapA(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
                       "reply": {
                         "id": "A6.VM",
                         "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.ST",
+                        "title": "Search Tapfuma",
                       },
                     },
                     {
@@ -2024,6 +2103,13 @@ function mapA(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
                   "reply": {
                     "id": "A6.VM",
                     "title": "View Menu",
+                  },
+                },
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "A6.ST",
+                    "title": "Search Tapfuma",
                   },
                 },
                 {
@@ -2114,6 +2200,13 @@ function mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType
                       "reply": {
                         "id": "A6.VM",
                         "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.ST",
+                        "title": "Search Tapfuma",
                       },
                     },
                     {
@@ -2472,6 +2565,13 @@ function mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType
                       {
                         "type": "reply",
                         "reply": {
+                          "id": "B7.ST",
+                          "title": "Search Tapfuma",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
                           "id": "B7.BP",
                           "title": "Browse Products",
                         },
@@ -2576,6 +2676,20 @@ function mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType
                 },
               },
             };
+          } else if (messageType == "buttonReply" && buttonReplyID == "B7.ST") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "C2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "What product are you looking for today?",
+              },
+            };
           } else {
             responseToUserText = {
               "messaging_product": "whatsapp",
@@ -2593,6 +2707,13 @@ function mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType
                       "reply": {
                         "id": "B7.VM",
                         "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "B7.ST",
+                        "title": "Search Tapfuma",
                       },
                     },
                     {
@@ -2633,6 +2754,13 @@ function mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType
                   "reply": {
                     "id": "B7.VM",
                     "title": "View Menu",
+                  },
+                },
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "B7.ST",
+                    "title": "Search Tapfuma",
                   },
                 },
                 {
@@ -2723,6 +2851,13 @@ function mapBX(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                       "reply": {
                         "id": "A6.VM",
                         "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.ST",
+                        "title": "Search Tapfuma",
                       },
                     },
                     {
@@ -3228,6 +3363,13 @@ function mapBX(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                       {
                         "type": "reply",
                         "reply": {
+                          "id": "BX11.ST",
+                          "title": "Search Tapfuma",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
                           "id": "BX11.BP",
                           "title": "Browse Products",
                         },
@@ -3332,6 +3474,20 @@ function mapBX(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                 },
               },
             };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BX11.ST") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "C2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "What product are you looking for today?",
+              },
+            };
           } else {
             responseToUserText = {
               "messaging_product": "whatsapp",
@@ -3349,6 +3505,13 @@ function mapBX(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                       "reply": {
                         "id": "BX11.VM",
                         "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BX11.ST",
+                        "title": "Search Tapfuma",
                       },
                     },
                     {
@@ -3389,6 +3552,13 @@ function mapBX(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                   "reply": {
                     "id": "BX11.VM",
                     "title": "View Menu",
+                  },
+                },
+                {
+                  "type": "reply",
+                  "reply": {
+                    "id": "BX11.ST",
+                    "title": "Search Tapfuma",
                   },
                 },
                 {
@@ -3479,6 +3649,13 @@ function mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                       "reply": {
                         "id": "A6.VM",
                         "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.ST",
+                        "title": "Search Tapfuma",
                       },
                     },
                     {
@@ -3732,6 +3909,13 @@ function mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                       {
                         "type": "reply",
                         "reply": {
+                          "id": "BZ6.ST",
+                          "title": "Search Tapfuma",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
                           "id": "BZ6.BP",
                           "title": "Browse Products",
                         },
@@ -3820,6 +4004,20 @@ function mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                 },
               },
             };
+          } else if (messageType == "buttonReply" && buttonReplyID == "BZ6.ST") {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "C2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "What product are you looking for today?",
+              },
+            };
           } else {
             responseToUserText = {
               "messaging_product": "whatsapp",
@@ -3837,6 +4035,13 @@ function mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                       "reply": {
                         "id": "BZ6.VM",
                         "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "BZ6.ST",
+                        "title": "Search Tapfuma",
                       },
                     },
                     {
@@ -3882,6 +4087,13 @@ function mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
                 {
                   "type": "reply",
                   "reply": {
+                    "id": "BZ6.ST",
+                    "title": "Search Tapfuma",
+                  },
+                },
+                {
+                  "type": "reply",
+                  "reply": {
                     "id": "BZ6.BP",
                     "title": "Browse Products",
                   },
@@ -3910,9 +4122,82 @@ function mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageT
   });
 }
 
-function mapC() {
+function mapC(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, previousChatFlowMapID, userTextMessage) {
+  let responseToUserText = {};
   return new Promise((resolve, reject) => {
-    sendFiveSearchResults();
+    switch (chatFlowMapID) {
+      case "C1":
+        {
+          const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+          docRef.set({
+            "chatFlowMapID": "C2",
+            "lastMessageTimeStamp": currentMessageTimeStamp,
+          }, {merge: true});
+
+          responseToUserText = {
+            "messaging_product": "whatsapp",
+            "to": userPhoneNumber,
+            "text": {
+              "body": "What product are you looking for today?",
+            },
+          };
+        }
+        break;
+      case "C2":
+        {
+          if (messageType == "text") {
+            sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, currentBrowseProductsIndex, currentMessageTimeStamp);
+          } else {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "C2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "We seem to have missed your response.What product are you looking for today?\n\nRespond 'X' to return home.",
+              },
+            };
+          }
+        }
+        break;
+      // case "C3":
+      // {}
+      default:
+      {
+        const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+        docRef.set({
+          "chatFlowMapID": "C2",
+          "lastMessageTimeStamp": currentMessageTimeStamp,
+        }, {merge: true});
+
+        responseToUserText = {
+          "messaging_product": "whatsapp",
+          "to": userPhoneNumber,
+          "text": {
+            "body": "What product are you looking for today?",
+          },
+        };
+      }
+    }
+
+
+    axios({
+      method: "POST",
+      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+      data: responseToUserText,
+      headers: {"Content-Type": "application/json"},
+    }).catch(function(error) {
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+      docRef.add({
+        "mapDerror": "axios error for map D is:" + error.message,
+        "isResolved": false,
+      });
+    });
+
     resolve();
   });
 }
@@ -5262,23 +5547,25 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
               "trending": false,
               "productReviews": 1,
               "numberOfPurchases": 1,
-              "productStars": "⭐️⭐️⭐️⭐️⭐️",
             }, {merge: true}).then(()=>{
               if (userPhoneNumber == "16475577272") {
                 productRef.get().then((doc) => {
                   const productDescriprion = doc.data()["productDescription"];
                   const productTitle = doc.data()["productTitle"];
                   const productKeywords = doc.data()["productKeys"];
+                  const productReviews = doc.data()["productReviews"];
+                  const productLink = doc.data()["productLink"];
                   const productScore = doc.data()["productScore"];
                   const productHasColors = doc.data()["productHasColors"];
+                  const availableCountries = ["CA", "UG", "RW", "BI", "KE", "TZ", "MW", "NA", "BW", "LS", "ZA", "ZM"];
                   const objectID = doc.id;
                   let data = {};
 
                   if (productHasColors) {
                     const productColors = doc.data()["productColors"];
-                    data = {productDescriprion, productTitle, productKeywords, productColors, productScore};
+                    data = {productDescriprion, productTitle, productKeywords, productColors, productScore, productReviews, productLink, availableCountries};
                   } else {
-                    data = {productDescriprion, productTitle, productKeywords, productScore};
+                    data = {productDescriprion, productTitle, productKeywords, productScore, productReviews, productLink, availableCountries};
                   }
 
                   index
@@ -5303,16 +5590,19 @@ function mapJ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName,
                   const productDescriprion = doc.data()["productDescription"];
                   const productTitle = doc.data()["productTitle"];
                   const productKeywords = doc.data()["productKeys"];
+                  const productReviews = doc.data()["productReviews"];
+                  const productLink = doc.data()["productLink"];
                   const productScore = doc.data()["productScore"];
                   const productHasColors = doc.data()["productHasColors"];
+                  const availableCountries = [countryCode];
                   const objectID = doc.id;
                   let data = {};
 
                   if (productHasColors) {
                     const productColors = doc.data()["productColors"];
-                    data = {productDescriprion, productTitle, productKeywords, productColors, productScore};
+                    data = {productDescriprion, productTitle, productKeywords, productColors, productScore, productReviews, productLink, availableCountries};
                   } else {
-                    data = {productDescriprion, productTitle, productKeywords, productScore};
+                    data = {productDescriprion, productTitle, productKeywords, productScore, productReviews, productLink, availableCountries};
                   }
 
                   index
@@ -5537,11 +5827,23 @@ function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStam
 
         //   }
         //   break;
-        // case "C0":
-        //   {
+        case "C0":
+          {
+            const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+            docRef.set({
+              "chatFlowMapID": "C2",
+              "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
 
-        //   }
-        //   break;
+            responseToUserText = {
+              "messaging_product": "whatsapp",
+              "to": userPhoneNumber,
+              "text": {
+                "body": "What product are you looking for today?",
+              },
+            };
+          }
+          break;
         case "D0":
           {
             responseMenu = categoryListMenu;
@@ -5892,6 +6194,13 @@ function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStam
                       "reply": {
                         "id": "A6.VM",
                         "title": "View Menu",
+                      },
+                    },
+                    {
+                      "type": "reply",
+                      "reply": {
+                        "id": "A6.ST",
+                        "title": "Search Tapfuma",
                       },
                     },
                     {
