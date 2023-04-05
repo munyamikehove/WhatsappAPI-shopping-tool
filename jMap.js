@@ -6,7 +6,7 @@ const extractUrls = require("extract-urls");
 
 let responseMenu = [];
 
-function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTimeStamp, buttonReplyID, messageType, client, consumerListMenu, currentProductID, listReplyID, categoryListMenu, userTextMessage, FieldValue, userName, merchantListMenu, categoryListReplyIDs, clothingSubCategoryListMenu, shoesSubCategoryListMenu, watchesnJewelrySubCategoryListMenu, beautySubCategoryListMenu, fragrancesSubCategoryListMenu, homenGardenSubCategoryListMenu, toysnGamesSubCategoryListMenu, sportsSubCategoryListMenu, electronicsSubCategoryListMenu, automotiveSubCategoryListMenu, lastMessageTimeStamp, currentUSDExchangeRates, jCategoryListMenu) {
+function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTimeStamp, buttonReplyID, messageType, client, consumerListMenu, currentProductID, listReplyID, categoryListMenu, userTextMessage, FieldValue, userName, merchantListMenu, categoryListReplyIDs, clothingSubCategoryListMenu, shoesSubCategoryListMenu, watchesnJewelrySubCategoryListMenu, beautySubCategoryListMenu, fragrancesSubCategoryListMenu, homenGardenSubCategoryListMenu, toysnGamesSubCategoryListMenu, sportsSubCategoryListMenu, electronicsSubCategoryListMenu, automotiveSubCategoryListMenu, lastMessageTimeStamp, currentUSDExchangeRates, jCategoryListMenu, supportedCurrencyCodes) {
   let responseToUserText = {};
 
   return new Promise((resolve, reject) => {
@@ -60,7 +60,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                     });
                   });
 
-                  j2.j2Extension(countryCode, productLink, userName, userPhoneNumber, currentMessageTimeStamp, fs, FieldValue, merchantListMenu);
+                  j2.j2Extension(countryCode, productLink, userName, userPhoneNumber, currentMessageTimeStamp, fs, FieldValue, merchantListMenu, supportedCurrencyCodes);
                 } else {
                   responseToUserText = {
                     "messaging_product": "whatsapp",
@@ -157,8 +157,12 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
             docRef.set({
               "chatFlowMapID": "J4",
-              "productHasSizes": true,
               "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+            productRef.set({
+              "productHasSizes": true,
             }, {merge: true});
 
             responseToUserText = {
@@ -172,8 +176,12 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
             docRef.set({
               "chatFlowMapID": "J6",
-              "productHasSizes": false,
               "lastMessageTimeStamp": currentMessageTimeStamp,
+            }, {merge: true});
+
+            const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts").doc(currentProductID);
+            productRef.set({
+              "productHasSizes": false,
             }, {merge: true});
 
             responseToUserText = {
@@ -406,7 +414,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
               "messaging_product": "whatsapp",
               "to": userPhoneNumber,
               "text": {
-                "body": "What keywords and key-phrases will users search for when looking for your product?\n\nPlease list up to 5 keywords and key-phrases, each separated by a comma.\n\nAn example of key words and phrases👇🏾\nbirthday, present, gift, birthday present for husband, birthday present ideas",
+                "body": "What keywords and key-phrases will buyers use when looking for your product?\n\nPlease list up to 5 keywords and key-phrases, each separated by a comma.\n\nAn example of key words and phrases👇🏾\nbirthday, present, gift, birthday present for husband, birthday present ideas",
               },
             };
           }
@@ -855,10 +863,18 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
 
                     switch (country) {
                       case "CA":
+                        {
+                          const rawCAD = priceInUSD;
+                          const canadaFormatter = new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: "CAD",
+                          });
+                          productPrice = canadaFormatter.format(rawCAD);
+                        }
                         break;
                       case "UG":
                         {
-                          const rawUGXShilling = priceInUSD*4000;
+                          const rawUGXShilling = priceInUSD*currentUSDExchangeRates["UG"];
                           const ugandaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "UGX",
@@ -868,7 +884,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "RW":
                         {
-                          const rawRWFranc = priceInUSD*1100;
+                          const rawRWFranc = priceInUSD*currentUSDExchangeRates["RW"];
                           const rwandaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "RWF",
@@ -878,7 +894,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "GH":
                         {
-                          const rawGHSCedi = priceInUSD*15;
+                          const rawGHSCedi = priceInUSD*currentUSDExchangeRates["GH"];
                           const ghanaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "GHS",
@@ -888,7 +904,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "NG":
                         {
-                          const rawNGNaira = priceInUSD*500;
+                          const rawNGNaira = priceInUSD*currentUSDExchangeRates["NG"];
                           const nigeriaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "NGN",
@@ -898,7 +914,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "MZ":
                         {
-                          const rawMZNMetical = priceInUSD*80;
+                          const rawMZNMetical = priceInUSD*currentUSDExchangeRates["MZ"];
                           const mozambiqueFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "MZN",
@@ -908,7 +924,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "KE":
                         {
-                          const rawKEShilling = priceInUSD*140;
+                          const rawKEShilling = priceInUSD*currentUSDExchangeRates["KE"];
                           const kenyaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "KES",
@@ -918,7 +934,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "TZ":
                         {
-                          const rawTZShilling = priceInUSD*2400;
+                          const rawTZShilling = priceInUSD*currentUSDExchangeRates["TZ"];
                           const tanzaniaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "TZS",
@@ -928,7 +944,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "MW":
                         {
-                          const rawMWKwacha = priceInUSD*1100;
+                          const rawMWKwacha = priceInUSD*currentUSDExchangeRates["MW"];
                           const malawiFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "MWK",
@@ -938,7 +954,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "NA":
                         {
-                          const rawNADollar = priceInUSD*19;
+                          const rawNADollar = priceInUSD*currentUSDExchangeRates["NA"];
                           const namibiaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "NAD",
@@ -948,7 +964,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "BW":
                         {
-                          const rawPula = priceInUSD*15;
+                          const rawPula = priceInUSD*currentUSDExchangeRates["BW"];
                           const botswanaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "BWP",
@@ -958,7 +974,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "LS":
                         {
-                          const rawLoti = priceInUSD*19;
+                          const rawLoti = priceInUSD*currentUSDExchangeRates["LS"];
                           const lesothoFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "LSL",
@@ -968,7 +984,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "ZA":
                         {
-                          const rawRand = priceInUSD*19;
+                          const rawRand = priceInUSD*currentUSDExchangeRates["ZA"];
                           const southAfricaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "ZAR",
@@ -978,7 +994,7 @@ function mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTim
                         break;
                       case "ZM":
                         {
-                          const rawZMWKwacha = priceInUSD*20;
+                          const rawZMWKwacha = priceInUSD*currentUSDExchangeRates["ZM"];
                           const zambiaFormatter = new Intl.NumberFormat("en-US", {
                             style: "currency",
                             currency: "ZMW",

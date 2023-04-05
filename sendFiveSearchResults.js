@@ -45,7 +45,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
     }).catch(function(error) {
       const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
       docRef.add({
-        "mapJerror": "axios error for sendFiveBrowseResults5 is:" + error.message,
+        "sendFiveSearchResultsError1": "axios error for sendFiveBrowseResults5 is:" + error.message,
         "isResolved": false,
       });
     });
@@ -71,6 +71,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                 live = product.live;
                 productPrice = product.productPrice;
                 imageRefreshedOn = product.imageRefreshedOn;
+
 
                 const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("searchResults").collection(`search#_${currentSearchResultsID}`).doc(`${productID}`);
 
@@ -135,12 +136,13 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
               }).catch(function(error) {
                 const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
                 docRef.add({
-                  "mapJerror": "axios error for sendFiveBrowseResults4 is:" + error.message,
+                  "sendFiveSearchResultsError2": "axios error for sendFiveBrowseResults4 is:" + error.message,
                   "isResolved": false,
                 });
               });
             }
-          }).then(()=>{
+          })
+          .then(()=>{
             setTimeout(function() {
               const query = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("searchResults").collection(`search#_${currentSearchResultsID}`).where("live", "==", true);
               query.get().then((snapShot) => {
@@ -197,6 +199,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
 
                       // Saved for reviews
                       // \n\nView reviews👇🏾\nwww.reviws.web.app/${productID}
+
                       if (productReviews > 1) {
                         responseToUserText = {
                           "messaging_product": "whatsapp",
@@ -220,14 +223,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                                 {
                                   "type": "reply",
                                   "reply": {
-                                    "id": `SH::${productLink}`,
-                                    "title": "Share",
-                                  },
-                                },
-                                {
-                                  "type": "reply",
-                                  "reply": {
-                                    "id": "A2",
+                                    "id": `ATC::${productID}`,
                                     "title": "Add to cart",
                                   },
                                 },
@@ -261,14 +257,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                                 {
                                   "type": "reply",
                                   "reply": {
-                                    "id": `SH::${productLink}`,
-                                    "title": "Share",
-                                  },
-                                },
-                                {
-                                  "type": "reply",
-                                  "reply": {
-                                    "id": `ATC::{"productColors":"${productColors}","productSizes":"${productSizes}","productID":"${productID}","productTitle":"${productTitle}","productLink":"${productLink}","productPrice":"${productPrice}"}`,
+                                    "id": `ATC::${productID}`,
                                     "title": "Add to cart",
                                   },
                                 },
@@ -277,6 +266,15 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                           },
                         };
                       }
+
+                      // console.log(productPDFLink);
+                      // responseToUserText = {
+                      //   "messaging_product": "whatsapp",
+                      //   "to": userPhoneNumber,
+                      //   "text": {
+                      //     "body": "Placeholder text for SFSR",
+                      //   },
+                      // };
 
 
                       axios({
@@ -287,7 +285,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                       }).catch(function(error) {
                         const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
                         docRef.add({
-                          "mapJerror": "axios error for sendFiveSearchResults1 is:" + error.message,
+                          "sendFiveSearchResultsError3": "axios error for sendFiveSearchResults1 is:" + error.message,
                           "isResolved": false,
                           "saver": `*${productTitle}*\n${productDescription}\n\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}${productID}${productReviews}${productStars}`,
                         });
@@ -356,7 +354,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                           }).catch(function(error) {
                             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
                             docRef.add({
-                              "mapJerror": "axios error for sendFiveBrowseResults2 is:" + error.message,
+                              "sendFiveSearchResultsError4": "axios error for sendFiveBrowseResults2 is:" + error.message,
                               "isResolved": false,
                             });
                           });
@@ -417,7 +415,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                           }).catch(function(error) {
                             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
                             docRef.add({
-                              "mapJerror": "axios error for sendFiveSearchResults2 is:" + error.message,
+                              "sendFiveSearchResultsError5": "axios error for sendFiveSearchResults2 is:" + error.message,
                               "isResolved": false,
                             });
                           });
@@ -527,7 +525,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
             }).catch(function(error) {
               const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
               docRef.add({
-                "mapJerror": "axios error for sendFiveSearchResults4 is:" + error.message,
+                "sendFiveSearchResultsError6": "axios error for sendFiveSearchResults4 is:" + error.message,
                 "isResolved": false,
               });
             });
@@ -611,7 +609,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                       {
                         "type": "reply",
                         "reply": {
-                          "id": `ATC::{"productColors":"${productColors}","productSizes":"${productSizes}","productID":"${productID}","productTitle":"${productTitle}","productLink":"${productLink}","productPrice":"${productPrice}"}`,
+                          "id": `ATC::${productID}`,
                           "title": "Add to cart",
                         },
                       },
@@ -628,7 +626,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
               }).catch(function(error) {
                 const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
                 docRef.add({
-                  "mapJerror": "axios error for sendFiveSearchResults1 is:" + error.message,
+                  "sendFiveSearchResultsError7": "axios error for sendFiveSearchResults1 is:" + error.message,
                   "isResolved": false,
                   "saver": `*${productTitle}*\n${productDescription}\n\n${productPrice}\n\nView product👇🏾\n${shortenedProductLink}${productID}${productReviews}${productStars}`,
                 });
@@ -697,7 +695,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                   }).catch(function(error) {
                     const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
                     docRef.add({
-                      "mapJerror": "axios error for sendFiveBrowseResults2 is:" + error.message,
+                      "sendFiveSearchResultsError8": "axios error for sendFiveBrowseResults2 is:" + error.message,
                       "isResolved": false,
                     });
                   });
@@ -757,7 +755,7 @@ function sendFiveSearchResults(userTextMessage, countryCode, userPhoneNumber, cu
                   }).catch(function(error) {
                     const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
                     docRef.add({
-                      "mapJerror": "axios error for sendFiveSearchResults2 is:" + error.message,
+                      "sendFiveSearchResultsError9": "axios error for sendFiveSearchResults2 is:" + error.message,
                       "isResolved": false,
                     });
                   });

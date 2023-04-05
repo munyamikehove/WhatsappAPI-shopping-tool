@@ -18,8 +18,8 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
     let productReviews = "";
     let productPDFLink = "";
     let productStars = "";
-    let productColors = "";
-    let productSizes = "";
+    // let productColors = "";
+    // let productSizes = "";
     let imageRefreshedOn = "0";
     let productScore = 0;
     let responseButtons = [];
@@ -378,8 +378,8 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
             productLink = productData["productLink"];
             productScore = productData["productScore"];
             productReviews = productData["productReviews"];
-            productSizes = productData["productSizes"];
-            productColors = productData["productColors"];
+            // productSizes = productData["productSizes"];
+            // productColors = productData["productColors"];
             productPDFLink = productData["productPDFLink"];
             productID = doc.id;
 
@@ -431,14 +431,7 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
                         {
                           "type": "reply",
                           "reply": {
-                            "id": `SH::${productLink}`,
-                            "title": "Share",
-                          },
-                        },
-                        {
-                          "type": "reply",
-                          "reply": {
-                            "id": "A2",
+                            "id": `ATC::${productID}`,
                             "title": "Add to cart",
                           },
                         },
@@ -472,14 +465,7 @@ function sendFiveBrowseResults(countryCode, userPhoneNumber, productCategory, cu
                         {
                           "type": "reply",
                           "reply": {
-                            "id": `SH::${productLink}`,
-                            "title": "Share",
-                          },
-                        },
-                        {
-                          "type": "reply",
-                          "reply": {
-                            "id": `ATC::{"productColors":"${productColors}","productSizes":"${productSizes}","productID":"${productID}","productTitle":"${productTitle}","productLink":"${productLink}","productPrice":"${productPrice}"}`,
+                            "id": `ATC::${productID}`,
                             "title": "Add to cart",
                           },
                         },

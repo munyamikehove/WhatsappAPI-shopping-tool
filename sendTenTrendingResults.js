@@ -13,8 +13,6 @@ function sendTenTrendingResults(countryCode, userPhoneNumber, productCategory, c
     let productReviews = "";
     let productPDFLink = "";
     let productStars = "";
-    let productColors = "";
-    let productSizes = "";
     let imageRefreshedOn = "0";
     let productScore = 0;
     let responseButtons = [];
@@ -24,7 +22,7 @@ function sendTenTrendingResults(countryCode, userPhoneNumber, productCategory, c
       "messaging_product": "whatsapp",
       "to": userPhoneNumber,
       "text": {
-        "body": "Give us a moment to find todays top 10 products......",
+        "body": "Give us a moment to find todays hottest products......",
       },
     };
 
@@ -368,8 +366,6 @@ function sendTenTrendingResults(countryCode, userPhoneNumber, productCategory, c
           productLink = productData["productLink"];
           productScore = productData["productScore"];
           productReviews = productData["productReviews"];
-          productSizes = productData["productSizes"];
-          productColors = productData["productColors"];
           productPDFLink = productData["productPDFLink"];
           productID = doc.id;
 
@@ -421,14 +417,7 @@ function sendTenTrendingResults(countryCode, userPhoneNumber, productCategory, c
                       {
                         "type": "reply",
                         "reply": {
-                          "id": `SH::${productLink}`,
-                          "title": "Share",
-                        },
-                      },
-                      {
-                        "type": "reply",
-                        "reply": {
-                          "id": "A2",
+                          "id": `ATC::${productID}`,
                           "title": "Add to cart",
                         },
                       },
@@ -462,14 +451,7 @@ function sendTenTrendingResults(countryCode, userPhoneNumber, productCategory, c
                       {
                         "type": "reply",
                         "reply": {
-                          "id": `SH::${productLink}`,
-                          "title": "Share",
-                        },
-                      },
-                      {
-                        "type": "reply",
-                        "reply": {
-                          "id": `ATC::{"productColors":"${productColors}","productSizes":"${productSizes}","productID":"${productID}","productTitle":"${productTitle}","productLink":"${productLink}","productPrice":"${productPrice}"}`,
+                          "id": `ATC::${productID}`,
                           "title": "Add to cart",
                         },
                       },

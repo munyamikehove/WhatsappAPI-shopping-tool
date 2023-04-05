@@ -18,8 +18,10 @@ const bzMap = require("./bzMap");
 const cMap = require("./cMap");
 const dMap = require("./dMap");
 const eMap = require("./eMap");
+const fMap = require("./fMap");
 const gMap = require("./gMap");
 const jMap = require("./jMap");
+const oMap = require("./oMap");
 const ooMap = require("./ooMap");
 const srr = require("./sendReadReceipt");
 const srpdf = require("./saveReviewsPDF");
@@ -45,20 +47,21 @@ const bucket = admin.storage().bucket();
 
 // const currentDate = moment().format("YYYY/MMM/DD");
 const mapAIDs = {"A0": "A0", "A1": "A1", "A2": "A2", "A3": "A3", "A4": "A4", "A5": "A5", "A6": "A6", "A7": "A7"};
-const mapBIDs = {"B0": "B0", "B1": "B1", "B2": "B2", "B3": "B3", "B4": "B4", "B5": "B5", "B6": "B6", "B7": "B7"};
+const mapBIDs = {"B0": "B0", "B1": "B1", "B2": "B2", "B3": "B3", "B4": "B4", "B5": "B5", "B6": "B6", "B7": "B7", "B8": "B8", "B9": "B9"};
 const mapBXIDs = {"BX0": "BX0", "BX1": "BX1", "BX2": "BX2", "BX3": "BX3", "BX4": "BX4", "BX5": "BX5", "BX6": "BX6", "BX7": "BX7", "BX8": "BX8", "BX9": "BX9", "BX10": "BX10", "BX11": "BX11"};
 const mapBZIDs = {"BZ0": "BZ0", "BZ1": "BZ1", "BZ2": "BZ2", "BZ3": "BZ3", "BZ4": "BZ4", "BZ5": "BZ5", "BZ6": "BZ6", "BZ7": "BZ7"};
 const mapCIDs = {"C1": "C1", "C2": "C2", "C3": "C3", "C4": "C4", "C5": "C5", "C6": "C6", "C7": "C7", "C8": "C8", "C9": "C9"};
 const mapDIDs = {"D1": "D1", "D2": "D2", "D3": "D3", "D4": "D4", "D5": "D5", "D6": "D6", "D7": "D7", "D8": "D8", "D9": "D9"};
 const mapEIDs = {"E1": "E1", "E2": "E2", "E3": "E3", "E4": "E4", "E5": "E5", "E6": "E6", "E7": "E7", "E8": "E8", "E9": "E9", "E10": "E10", "E11": "E11", "E12": "E12"};
-const mapFIDs = {};
+const mapFIDs = {"F1": "F1", "F2": "F2", "F3": "F3"};
 const mapGIDs = {"G1": "G1", "G2": "G2", "G3": "G3"};
 const mapIIDs = {};
 const mapJIDs = {"J1": "J1", "J2": "J2", "J3": "J3", "J4": "J4", "J5": "J5", "J6": "J6", "J7": "J7", "J8": "J8", "J9": "J9", "J10": "J10", "J11": "J11", "J12": "J12", "J13": "J13"};
 const mapKIDs = {};
 const mapLIDs = {};
 const mapMIDs = {};
-const map00IDs = {"00": "00"};
+const mapOIDs = {"O1": "O1", "O2": "O2", "O3": "O3"};
+const map00IDs = {"00": "00", "G0": "G0"};
 // const supportedCountryCodes = {"DE": "DE", "GY": "GY", "PG": "PG", "SB": "SB", "VU": "VU", "FJ": "FJ", "AG": "AG", "DM": "DM", "LC": "LC", "VC": "VC", "GD": "GD", "BB": "BB", "TT": "TT", "LK": "LK", "IN": "IN", "BD": "BD", "PR": "PR", "BS": "BS", "JM": "JM", "BZ": "BZ", "HK": "HK", "SG": "SG", "SL": "SL", "MU": "MU", "PH": "PH", "CA": "CA", "ZA": "ZA", "LS": "LS", "SZ": "SZ", "ZW": "ZW", "BW": "BW", "ZM": "ZM", "NA": "NA", "MW": "MW", "TZ": "TZ", "KE": "KE", "BI": "BI", "RW": "RW", "UG": "UG", "US": "US", "GB": "GB", "AU": "AU", "NZ": "NZ", "IE": "IE", "NG": "NG", "LB": "LB", "AE": "AE", "QA": "QA"};
 // const supportedCurrencyCodes = {"GY": "gyd", "PG": "pgk", "SB": "sbd", "VU": "vuv", "FJ": "fjd", "AG": "xcd", "DM": "xcd", "LC": "xcd", "VC": "xcd", "GD": "xcd", "BB": "bbd", "TT": "ttd", "LK": "lkr", "IN": "inr", "BD": "bdt", "PR": "usd", "BS": "bsd", "JM": "jmd", "BZ": "bzd", "HK": "hkd", "SG": "sgd", "SL": "sll", "MU": "mur", "PH": "php", "CA": "cad", "ZA": "zar", "LS": "lsl", "SZ": "szl", "ZW": "usd", "BW": "bwp", "ZM": "zmw", "NA": "nad", "MW": "mwk", "TZ": "tzs", "KE": "kes", "BI": "bif", "RW": "rwf", "UG": "ugx", "US": "usd", "GB": "gbp", "AU": "aud", "NZ": "nzd", "IE": "eur", "NG": "ngn", "LB": "usd", "AE": "aed", "QA": "qar"};
 // const initialBalanceTransaction = {"GY": -2098, "PG": -35, "SB": -82, "VU": -122, "FJ": -23, "AG": -27, "DM": -27, "LC": -27, "VC": -27, "GD": -27, "BB": -20, "TT": -68, "LK": -3686, "IN": -817, "BD": -1060, "PR": -10, "BS": -10, "JM": -1543, "BZ": -20, "HK": -78, "SG": -14, "SL": -176500, "MU": -438, "PH": -581, "CA": -14, "ZA": -178, "LS": -177, "SZ": -179, "ZW": -10, "BW": -133, "ZM": -164, "NA": -177, "MW": -10271, "TZ": -23300, "KE": -1218, "BI": -207, "RW": -107, "UG": -378, "US": -10, "GB": -8, "AU": -16, "NZ": -17, "IE": -10, "NG": -4403, "LB": -10, "AE": -37, "QA": -36};
@@ -71,7 +74,8 @@ const currentUSDExchangeRates = {"FR": 0.95, "SG": 1.40, "DE": 0.95, "CA": 1.40,
 const minimumWithdrawalThreshold = {"FR": 90, "SG": 130, "DE": 90, "CA": 130, "ZA": 1700, "LS": 1700, "SZ": 1700, "ZW": 99, "BW": 1300, "ZM": 2000, "NA": 1700, "MW": 100000, "TZ": 230000, "KE": 13000, "RW": 108000, "UG": 370000, "US": 99, "GB": 80, "AU": 140, "NZ": 150, "IE": 90, "NG": 45500, "AE": 360, "QA": 360, "GH": 1200, "MZ": 6200};
 const categoryListReplyIDs = {"1": "1", "2": "2", "3": "3", "4": "4", "5": "5", "6": "6", "7": "7", "8": "8", "9": "9", "10": "10"};
 const keyResponseList = {"x": "x", "s": "s", "m": "m", "b": "b", "i'd like an invitation to tapfuma": "i'd like an invitation to tapfuma"};
-const permittedMerchants = {"16475577272": "16475577272", "263715526121": "263715526121"};
+const cityLimits = {"CA": "Toronto.", "ZA": "Johannesburg, Pretoria, Durban, Gqeberha, and Cape Town.", "ZW": "Harare and Bulawayo.", "ZM": "Lusaka."};
+const permittedMerchants = {"16475577272": "16475577272", "263715526121": "263715526121", "16474741834": "16474741834"};
 const consumerListMenu = [
   {
     "id": "C0",
@@ -101,10 +105,10 @@ const consumerListMenu = [
     "id": "H0",
     "title": "🔑 Seller Services",
   },
-  // {
-  //   "id": "I0",
-  //   "title": "👋🏾 Tapfuma FAQs",
-  // },
+  {
+    "id": "I0",
+    "title": "👋🏾 Tapfuma FAQs",
+  },
   {
     "id": "K0",
     "title": "❤️‍🩹 Get Support",
@@ -113,7 +117,7 @@ const consumerListMenu = [
 const merchantListMenu = [
   {
     "id": "J0",
-    "title": "🏷️ List Products",
+    "title": "🏷️ Add Product",
   },
   {
     "id": "L0",
@@ -680,7 +684,7 @@ router.post("/", async (req, res) => {
 
             // Create stripe customer account
             // Create authy user account
-            if ((chatFlowMapID == "B6" && messageType == "buttonReply" && buttonReplyID == "B6.NEXT") || (chatFlowMapID == "BX10" && messageType == "buttonReply" && buttonReplyID == "BX10.NEXT")) {
+            if ((chatFlowMapID == "B8" && messageType == "buttonReply" && buttonReplyID == "B8.NEXT") || (chatFlowMapID == "BX10" && messageType == "buttonReply" && buttonReplyID == "BX10.NEXT")) {
               authy.register_user(`${userPhoneNumber}@tapfuma.com`, userPhoneNumber, true, function(err, res) {
                 const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
                 docRef.set({
@@ -712,14 +716,14 @@ router.post("/", async (req, res) => {
             }
 
             // Get the number of items in a shopping cart
-            if ((chatFlowMapID == "C3" && messageType == "buttonReply") || (chatFlowMapID == "D4" && messageType == "buttonReply")) {
+            if ((chatFlowMapID == "C3" && messageType == "buttonReply") || (chatFlowMapID == "D4" && messageType == "buttonReply") || (chatFlowMapID == "O1" && messageType == "buttonReply") || (chatFlowMapID == "00" && listReplyID == "O0")) {
               const cartResult = await gcs.getCartStatus(userPhoneNumber, countryCode, fs);
               itemsInCart = cartResult["itemsInCart"];
               cartSnapshot = cartResult["cartSnapshot"];
             }
 
             // Set registered user state in profile
-            if (chatFlowMapID == "B6" && messageType == "buttonReply" && buttonReplyID == "B6.NEXT") {
+            if (chatFlowMapID == "B8" && messageType == "buttonReply" && buttonReplyID == "B8.NEXT") {
               const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
               docRef.set({
                 "registeredUser": true,
@@ -752,7 +756,7 @@ router.post("/", async (req, res) => {
                 await aMap.mapA(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, userName, messageType, buttonReplyID, countryCode, fs, consumerListMenu, categoryListMenu);
                 break;
               case mapBIDs[chatFlowMapID] != undefined:
-                await bMap.mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType, buttonReplyID, userTextMessage, currentMessageTimeStamp, countryCode, fs, consumerListMenu, categoryListMenu);
+                await bMap.mapB(userPhoneNumber, previousChatFlowMapID, chatFlowMapID, messageType, buttonReplyID, userTextMessage, currentMessageTimeStamp, countryCode, fs, consumerListMenu, categoryListMenu, cityLimits);
                 break;
               case mapBXIDs[chatFlowMapID] != undefined:
                 await bxMap.mapBX(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, countryCode, previousChatFlowMapID, userTextMessage, addressLatitude, addressLongitude, addressFull, addressName, fs, merchantListMenu, consumerListMenu, categoryListMenu);
@@ -761,16 +765,16 @@ router.post("/", async (req, res) => {
                 await bzMap.mapBZ(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, countryCode, previousChatFlowMapID, userTextMessage, addressLatitude, addressLongitude, addressFull, addressName, fs, merchantListMenu, consumerListMenu, categoryListMenu);
                 break;
               case mapCIDs[chatFlowMapID] != undefined:
-                await cMap.mapC(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, previousChatFlowMapID, userTextMessage, currentSearchResultsID, itemsInCart, cartSnapshot, fs, client, currencyPrefix, categoryListMenu);
+                await cMap.mapC(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, previousChatFlowMapID, userTextMessage, currentSearchResultsID, itemsInCart, cartSnapshot, fs, client, currencyPrefix, categoryListMenu, supportedCurrencyCodes, registeredUser);
                 break;
               case mapDIDs[chatFlowMapID] != undefined:
-                await dMap.mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, currentProductCategoryID, itemsInCart, cartSnapshot, fs, client, currencyPrefix, categoryListMenu, shoesSubCategoryListMenu, watchesnJewelrySubCategoryListMenu, beautySubCategoryListMenu, fragrancesSubCategoryListMenu, homenGardenSubCategoryListMenu, toysnGamesSubCategoryListMenu, sportsSubCategoryListMenu, electronicsSubCategoryListMenu, clothingSubCategoryListMenu, automotiveSubCategoryListMenu, categoryListReplyIDs);
+                await dMap.mapD(chatFlowMapID, currentMessageTimeStamp, userPhoneNumber, messageType, buttonReplyID, listReplyID, countryCode, currentBrowseProductsIndex, currentProductCategoryID, itemsInCart, cartSnapshot, fs, client, currencyPrefix, categoryListMenu, shoesSubCategoryListMenu, watchesnJewelrySubCategoryListMenu, beautySubCategoryListMenu, fragrancesSubCategoryListMenu, homenGardenSubCategoryListMenu, toysnGamesSubCategoryListMenu, sportsSubCategoryListMenu, electronicsSubCategoryListMenu, clothingSubCategoryListMenu, categoryListReplyIDs, supportedCurrencyCodes, registeredUser);
                 break;
               case mapEIDs[chatFlowMapID] != undefined:
                 await eMap.mapE(chatFlowMapID, fs, countryCode, userPhoneNumber, currentMessageTimeStamp, buttonReplyID, currencyPrefix, currentUSDExchangeRates, messageType, stripeCustomer, govIssuedIDType, govIssuedPhotoID, officialUserName, userBirthDate, MTRAddress, minimumWithdrawalThreshold, userTextMessage, supportedCurrencyCodes, stripe, stripeCustomerID, authyID);
                 break;
               case mapFIDs[chatFlowMapID] != undefined:
-                await mapF();
+                await fMap.mapF(chatFlowMapID, fs, countryCode, userPhoneNumber, currentMessageTimeStamp);
                 break;
               case mapGIDs[chatFlowMapID] != undefined:
                 await gMap.mapG(chatFlowMapID, fs, countryCode, userPhoneNumber, currentMessageTimeStamp, addressFull, messageType, stripeCustomer, govIssuedIDType, govIssuedPhotoID, officialUserName, userBirthDate, MTRAddress, userTextMessage, authyID);
@@ -779,7 +783,7 @@ router.post("/", async (req, res) => {
                 await mapI();
                 break;
               case mapJIDs[chatFlowMapID] != undefined:
-                await jMap.mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTimeStamp, buttonReplyID, messageType, client, consumerListMenu, currentProductID, listReplyID, categoryListMenu, userTextMessage, FieldValue, userName, merchantListMenu, categoryListReplyIDs, clothingSubCategoryListMenu, shoesSubCategoryListMenu, watchesnJewelrySubCategoryListMenu, beautySubCategoryListMenu, fragrancesSubCategoryListMenu, homenGardenSubCategoryListMenu, toysnGamesSubCategoryListMenu, sportsSubCategoryListMenu, electronicsSubCategoryListMenu, automotiveSubCategoryListMenu, lastMessageTimeStamp, currentUSDExchangeRates, jCategoryListMenu);
+                await jMap.mapJ(fs, chatFlowMapID, countryCode, userPhoneNumber, currentMessageTimeStamp, buttonReplyID, messageType, client, consumerListMenu, currentProductID, listReplyID, categoryListMenu, userTextMessage, FieldValue, userName, merchantListMenu, categoryListReplyIDs, clothingSubCategoryListMenu, shoesSubCategoryListMenu, watchesnJewelrySubCategoryListMenu, beautySubCategoryListMenu, fragrancesSubCategoryListMenu, homenGardenSubCategoryListMenu, toysnGamesSubCategoryListMenu, sportsSubCategoryListMenu, electronicsSubCategoryListMenu, automotiveSubCategoryListMenu, lastMessageTimeStamp, currentUSDExchangeRates, jCategoryListMenu, supportedCurrencyCodes);
                 break;
               case mapKIDs[chatFlowMapID] != undefined:
                 await mapK();
@@ -790,8 +794,11 @@ router.post("/", async (req, res) => {
               case mapMIDs[chatFlowMapID] != undefined:
                 await mapM();
                 break;
+              case mapOIDs[chatFlowMapID] != undefined:
+                await oMap.mapO(fs, chatFlowMapID, messageType, buttonReplyID, cartSnapshot, userPhoneNumber, countryCode, listReplyID, currentMessageTimeStamp, supportedCurrencyCodes, stripeCustomerID, stripe, stripeCustomer, currentUSDExchangeRates, FieldValue, MTRAddress, cityLimits);
+                break;
               case map00IDs[chatFlowMapID] != undefined:
-                await ooMap.map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStamp, countryCode, registeredUser, registeredMerchant, buttonReplyID, fs, permittedMerchants, consumerListMenu, merchantListMenu, categoryListMenu, stripeCustomer, govIssuedIDType, govIssuedPhotoID, userBirthDate, MTRAddress, officialUserName, addressFull);
+                await ooMap.map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStamp, countryCode, registeredUser, registeredMerchant, buttonReplyID, fs, permittedMerchants, consumerListMenu, merchantListMenu, categoryListMenu, stripeCustomer, govIssuedIDType, govIssuedPhotoID, userBirthDate, MTRAddress, officialUserName, addressFull, supportedCurrencyCodes, cartSnapshot);
                 break;
               default:
               {
@@ -1190,13 +1197,6 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   res.send({"Hello": "DELETE"});
 });
-
-
-function mapF() {
-  return new Promise((resolve, reject) => {
-    resolve();
-  });
-}
 
 
 function mapI() {

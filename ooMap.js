@@ -4,11 +4,12 @@ const moment = require("moment");
 
 let responseMenu = [];
 
-function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStamp, countryCode, registeredUser, registeredMerchant, buttonReplyID, fs, permittedMerchants, consumerListMenu, merchantListMenu, categoryListMenu, stripeCustomer, govIssuedIDType, govIssuedPhotoID, userBirthDate, MTRAddress, officialUserName, addressFull) {
+function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStamp, countryCode, registeredUser, registeredMerchant, buttonReplyID, fs, permittedMerchants, consumerListMenu, merchantListMenu, categoryListMenu, stripeCustomer, govIssuedIDType, govIssuedPhotoID, userBirthDate, MTRAddress, officialUserName, addressFull, supportedCurrencyCodes, cartSnapshot) {
   let responseToUserText = {};
   let chatFlowMapID = "";
   let yesButtonID = "";
   let noButtonID = "";
+  let axiosTrigger = true;
 
   return new Promise((resolve, reject) => {
     // send response message to user
@@ -241,9 +242,26 @@ function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStam
 
               responseToUserText = {
                 "messaging_product": "whatsapp",
+                "recipient_type": "individual",
                 "to": userPhoneNumber,
-                "text": {
-                  "body": "Placeholder text for F2 service resumption",
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "*Gift card guide*\n\nSending money through a giftcard allows your friend or family member to transact on Tapfuma.\n\nYour friend or family member must be a registered Tapfuma user.\n\nAll gift cards are denominated in USD.When you send a gift card, we will add the local currency equivalent to your recipients Tapfuma wallet.\n\nTapfuma is not a remittance service, money transfer service or banking service.\nThe money you send as a giftcard cannot be withdrawn as cash by your recipient.",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": "F2",
+                          "title": "Next",
+                        },
+                      },
+
+                    ],
+                  },
                 },
               };
             } else {
@@ -368,7 +386,7 @@ function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStam
 
                 let buyerAddress = "";
                 if (addressFull != undefined) {
-                  buyerAddress = `\n\nDelivery address:\n${addressFull}`;
+                  buyerAddress = `\n\nDelivery address:\n${MTRAddress}`;
                 }
 
                 responseToUserText = {
@@ -638,11 +656,195 @@ function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStam
 
           //   }
           //   break;
-          // case "M0":
-          //   {
+        case "O0":
+          {
+            if (registeredUser) {
+              if (cartSnapshot.size > 0) {
+                const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+                docRef.set({
+                  "chatFlowMapID": "O1",
+                  "lastMessageTimeStamp": currentMessageTimeStamp,
+                }, {merge: true});
 
-          //   }
-          //   break;
+                axiosTrigger = false;
+                let subTotal = 0.0;
+                let displaySubTotal = "";
+                const shoppingCart = [];
+                cartSnapshot.forEach((doc) => {
+                  const productData = doc.data();
+                  const productTitle = productData["productTitle"];
+                  const productPrice = productData["productPrice"];
+                  const productID = doc.id;
+
+
+                  const b = `0.${productPrice.split(".")[1].trim()}`;
+                  const c = productPrice.split(".")[0].trim();
+                  const c2 = c.replace(/\D/g, "");
+
+                  subTotal = subTotal + parseFloat(c2) + parseFloat(b);
+
+                  shoppingCart.push({
+                    "id": `RMV::Ask::${productID}::${productTitle}`,
+                    "title": productPrice,
+                    "description": productTitle,
+                  });
+                });
+
+                const formatter = new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: `${supportedCurrencyCodes[countryCode]}`,
+                });
+
+                displaySubTotal = formatter.format(subTotal);
+
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "recipient_type": "individual",
+                  "to": `${userPhoneNumber}`,
+                  "type": "interactive",
+                  "interactive": {
+                    "type": "list",
+                    "body": {
+                      "text": "Here is a summary of your cart.\n\nTo delete an item in your cart, tap and send it from the list below 👇🏾.",
+                    },
+                    "action": {
+                      "button": "View Cart Items",
+                      "sections": [
+                        {
+                          "title": `Subtotal ${displaySubTotal}`,
+                          "rows": shoppingCart,
+                        },
+                      ],
+                    },
+                  },
+                };
+
+                axios({
+                  method: "POST",
+                  url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                  data: responseToUserText,
+                  headers: {"Content-Type": "application/json"},
+                }).catch(function(error) {
+                  const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                  docRef.add({
+                    "mapDerror": "axios error for map D is:" + error.message,
+                    "isResolved": false,
+                  });
+                });
+
+
+                setTimeout(function() {
+                  responseToUserText = {
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": userPhoneNumber,
+                    "type": "interactive",
+                    "interactive": {
+                      "type": "button",
+                      "body": {
+                        "text": "What would you like to do next?",
+                      },
+                      "action": {
+                        "buttons": [
+                          {
+                            "type": "reply",
+                            "reply": {
+                              "id": "RH",
+                              "title": "Return home",
+                            },
+                          },
+                          {
+                            "type": "reply",
+                            "reply": {
+                              "id": "PO",
+                              "title": "Pay for order",
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  };
+
+                  axios({
+                    method: "POST",
+                    url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                    data: responseToUserText,
+                    headers: {"Content-Type": "application/json"},
+                  }).catch(function(error) {
+                    const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                    docRef.add({
+                      "mapDerror": "axios error for map D is:" + error.message,
+                      "isResolved": false,
+                    });
+                  });
+                }, 1000);
+              } else {
+                axiosTrigger = false;
+                responseToUserText = {
+                  "messaging_product": "whatsapp",
+                  "to": userPhoneNumber,
+                  "text": {
+                    "body": "Your shopping cart is currently empty. Respond 'b' to browse a new category or 'x' to return home.",
+                  },
+                };
+
+                axios({
+                  method: "POST",
+                  url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+                  data: responseToUserText,
+                  headers: {"Content-Type": "application/json"},
+                }).catch(function(error) {
+                  const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile").collection("errors");
+                  docRef.add({
+                    "mapDerror": "axios error for map D is:" + error.message,
+                    "isResolved": false,
+                  });
+                });
+              }
+            } else {
+              chatFlowMapID = "B0";
+              yesButtonID = "B0.YES";
+              noButtonID = "B0.NO";
+
+              const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+              docRef.set({
+                "chatFlowMapID": chatFlowMapID,
+                "lastMessageTimeStamp": currentMessageTimeStamp,
+                "previousChatFlowMapID": "G0",
+              }, {merge: true});
+
+              responseToUserText = {
+                "messaging_product": "whatsapp",
+                "to": userPhoneNumber,
+                "type": "interactive",
+                "interactive": {
+                  "type": "button",
+                  "body": {
+                    "text": "It looks like you are not yet a registered user.\n\nOnly registered sellers can access user profile features.\n\nWould you like to become a registered user?",
+                  },
+                  "action": {
+                    "buttons": [
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": yesButtonID,
+                          "title": "Yes",
+                        },
+                      },
+                      {
+                        "type": "reply",
+                        "reply": {
+                          "id": noButtonID,
+                          "title": "No, not today",
+                        },
+                      },
+                    ],
+                  },
+                },
+              };
+            }
+          }
+          break;
         case "N0":
           {
             const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
@@ -716,6 +918,51 @@ function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStam
           };
         }
       }
+    } else if (messageType == "buttonReply" && buttonReplyID == "G0") {
+      const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
+      docRef.set({
+        "chatFlowMapID": "A6",
+        "lastMessageTimeStamp": currentMessageTimeStamp,
+      }, {merge: true});
+
+      let balance = 0;
+      const currency = stripeCustomer["currency"].toUpperCase();
+      if (countryCode != "UG" && countryCode != "RW") {
+        balance = stripeCustomer["balance"]/-100;
+      } else {
+        balance = stripeCustomer["balance"]/-1;
+      }
+
+      const userBirthDateObject = moment(userBirthDate).format("MMM Do YYYY");
+
+      let buyerAddress = "";
+      if (addressFull != undefined) {
+        buyerAddress = `\n\nDelivery address:\n${MTRAddress}`;
+      }
+
+      responseToUserText = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": userPhoneNumber,
+        "type": "interactive",
+        "interactive": {
+          "type": "button",
+          "body": {
+            "text": `*Your Profile*:\n\nFull Name:\n${officialUserName}\n\nDOB:\n${userBirthDateObject}\n\nCurrent balance:\n${balance} ${currency}${buyerAddress}`,
+          },
+          "action": {
+            "buttons": [
+              {
+                "type": "reply",
+                "reply": {
+                  "id": "A6",
+                  "title": "Continue",
+                },
+              },
+            ],
+          },
+        },
+      };
     } else {
       if (messageType == "buttonReply" && buttonReplyID == "J0") {
         const docRef = fs.collection(`${countryCode}`).doc("Profiles").collection(`${userPhoneNumber}`).doc("userProfile");
@@ -758,17 +1005,19 @@ function map00(userPhoneNumber, messageType, listReplyID, currentMessageTimeStam
       }
     }
 
-    axios({
-      method: "POST",
-      url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
-      data: responseToUserText,
-      headers: {"Content-Type": "application/json"},
-    }).catch(function(error) {
-      const docRef5 = fs.collection("errors");
-      docRef5.add({
-        "errorMessage": "axios error for sendMenuSelection is:" + error.message,
+    if (axiosTrigger) {
+      axios({
+        method: "POST",
+        url: `https://graph.facebook.com/${process.env.WABA_GRAPHAPI_VERSION}/${process.env.WABA_PHONE_NUMBER_ID}/messages?access_token=${process.env.WABA_ACCESS_TOKEN}`,
+        data: responseToUserText,
+        headers: {"Content-Type": "application/json"},
+      }).catch(function(error) {
+        const docRef5 = fs.collection("errors");
+        docRef5.add({
+          "errorMessage": "axios error for sendMenuSelection is:" + error.message,
+        });
       });
-    });
+    }
 
     resolve();
   });

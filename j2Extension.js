@@ -3,7 +3,7 @@ const axios = require("axios");
 const {parser} = require("html-metadata-parser");
 
 
-function j2Extension(countryCode, productLink, userName, userPhoneNumber, currentMessageTimeStamp, fs, FieldValue, merchantListMenu) {
+function j2Extension(countryCode, productLink, userName, userPhoneNumber, currentMessageTimeStamp, fs, FieldValue, merchantListMenu, supportedCurrencyCodes) {
   return new Promise((resolve, reject) => {
     let responseToUserText = {};
     parser(productLink).then((result)=>{
@@ -16,9 +16,20 @@ function j2Extension(countryCode, productLink, userName, userPhoneNumber, curren
               const fixedTitleArray = result.og["title"].split(` from ${userName} `);
               const productTitle = fixedTitleArray[0].trim();
               const productDescription = fixedDescriptionArray[0].trim();
-              const productPrice = fixedDescriptionArray[1].trim();
+              const price = fixedDescriptionArray[1].trim();
               const productImage = result.og["image"];
 
+              const b = `0.${price.split(".")[1].trim()}`;
+              const c = price.split(".")[0].trim();
+              const c2 = c.replace(/\D/g, "");
+              const c3 = parseFloat(c2) + parseFloat(b);
+
+              const formatter = new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: `${supportedCurrencyCodes[countryCode]}`,
+              });
+
+              const productPrice = formatter.format(c3);
 
               const productRef = fs.collection(`${countryCode}`).doc("Products").collection("allProducts");
               productRef.add({
